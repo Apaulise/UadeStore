@@ -1,17 +1,32 @@
 # Node
 node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+package-lock.json
+
+# Builds / cache
 dist/
 .vite/
-npm-debug.log*
-pnpm-lock.yaml
-yarn.lock
+.cache/
+coverage/
 
-# Envs
+# Env files
 .env
+.env.*
 backend/.env
 frontend/.env*
 *.local
 
-# SO
+# Frontend (Vite/Tailwind)
+*.tsbuildinfo
+
+# OS / IDE
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log

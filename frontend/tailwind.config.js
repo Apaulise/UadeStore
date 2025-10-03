@@ -5,9 +5,13 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: "#1E40AF", // reemplazar por el azul de tu Figma
-          secondary: "#F59E0B", // reemplazar por tu secundario
+          cream: "#EFE7DE",
+          blue: "#1F3B67",
+          text: "#111111",
         },
+      },
+      maxWidth: {
+        container: "72rem",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

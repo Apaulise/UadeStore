@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import logoUade from "../../assets/logouadestore.png";
 
 const navItems = [
   { to: "/", label: "Inicio" },
@@ -80,11 +81,14 @@ const Header = () => {
       <div className="max-w-container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-4 lg:justify-normal lg:gap-8">
           <div className="min-w-0">
-            <Link to="/" className="flex flex-col leading-none">
-              <span className="text-xl font-extrabold tracking-tight">UADE</span>
-              <span className="text-xs font-semibold tracking-[0.35em] text-brand-text/70">
-                MERCH
-              </span>
+            <Link to="/" className="flex items-center" aria-label="Ir al inicio">
+              <img
+                src={logoUade}
+                alt="UADE Store Merch"
+                className="h-8 w-auto md:h-10"
+                loading="eager"
+                decoding="async"
+              />
             </Link>
           </div>
 

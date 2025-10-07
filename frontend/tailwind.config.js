@@ -6,7 +6,7 @@ export default {
       colors: {
         brand: {
           cream: "#EFE7DE",
-          blue: "#1F3B67",
+          blue: "#1E3A5F",
           text: "#111111",
         },
       },

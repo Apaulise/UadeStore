@@ -10,7 +10,7 @@ import nuevoLanzamientoImg from "../assets/nuevo-lanzamiento.png";
 // --- NUEVAS IMPORTACIONES DE IMÁGENES ---
 import tiendaInteriorImg from "../assets/nuevo-lanzamiento.png"; // Reemplaza con tu imagen
 import tiendaExteriorImg from "../assets/nuevo-lanzamiento.png"; // Reemplaza con tu imagen
-
+import { Link } from 'react-router-dom';
 
 const categories = [
   { name: "Nuestros Básicos", image: basicosImg, href: "#" },
@@ -57,9 +57,10 @@ const Home = () => {
         <div className="max-w-container mx-auto">
           {/* Grilla de Categorías (EXISTENTE) */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {categories.map((category, index) => (
-              <a
+            {categories.map((category) => (
+              <Link
                 key={category.name}
+                to={`/catalogo?categoria=${encodeURIComponent(category.name)}`}
                 href={category.href}
                 className={`flex flex-col items-center border-transparent gap-3 rounded-xl bg-white p-4 text-center shadow-sm transition hover:shadow-md`}
               >
@@ -71,7 +72,7 @@ const Home = () => {
                 <span className="text-sm font-semibold text-gray-800">
                   {category.name}
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
 

@@ -1,12 +1,235 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import ProductCard from '../components/layout/ProductCard';
+import { useSearchParams } from 'react-router-dom';
+
+// --- DATOS DE MUESTRA (Reemplazar con tu llamada a la API) ---
+const mockProducts = [
+  { id: 1, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: true, size: 'M', color: 'Gris' },
+  { id: 2, name: 'Remera UADE', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
+  { id: 3, name: 'Cuaderno Rayado', category: 'Librería', price: 12, inStock: true, size: null, color: 'Negro' },
+  { id: 4, name: 'Botella Térmica', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
+  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
+  { id: 6, name: 'Buzo UADE Azul', category: 'Bestsellers', price: 54, inStock: true, size: 'L', color: 'Azul' },
+  { id: 7, name: 'Gorra UADE', category: 'Accesorios', price: 18, inStock: true, size: null, color: 'Negro' },
+  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
+  { id: 9, name: 'Taza UADE', category: 'Accesorios', price: 15, inStock: true, size: null, color: 'Blanco' },
+  { id: 10, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: false, size: 'S', color: 'Gris' },
+];
+
+// --- PÁGINA PRINCIPAL DEL CATÁLOGO ---
+
 const Catalog = () => {
+  // --- ESTADOS ---
+  const [allProducts, setAllProducts] = useState([]); // Lista maestra de productos
+  const [filteredProducts, setFilteredProducts] = useState([]); // Lista que se muestra al usuario
+  const [filters, setFilters] = useState({
+    category: null,
+    sizes: [],
+    colors: [],
+    inStockOnly: false,
+    maxPrice: 100,
+  });
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // --- EFECTOS (LÓGICA) ---
+
+  // 1. Simula la carga inicial de datos (reemplazar con fetch real)
+  useEffect(() => {
+    // Aquí harías tu llamada a la API: fetch('/api/products').then(...)
+    setAllProducts(mockProducts);
+  }, []);
+
+  // 2. Sincroniza el parámetro 'categoria' de la URL con el estado de los filtros
+  useEffect(() => {
+    const categoryFromURL = searchParams.get('categoria');
+    if (categoryFromURL) {
+      setFilters(prev => ({ ...prev, category: categoryFromURL }));
+    }
+  }, [searchParams]);
+
+  // 3. El "MOTOR" de filtrado: se ejecuta cada vez que cambian los filtros o la lista de productos
+  useEffect(() => {
+    let products = [...allProducts];
+
+    // Filtrado por categoría
+    if (filters.category) {
+      products = products.filter(p => p.category === filters.category);
+    }
+    // Filtrado por Talle (si se seleccionó al menos uno)
+    if (filters.sizes.length > 0) {
+      products = products.filter(p => p.size && filters.sizes.includes(p.size));
+    }
+    // Filtrado por Color (si se seleccionó al menos uno)
+    if (filters.colors.length > 0) {
+      products = products.filter(p => p.color && filters.colors.includes(p.color));
+    }
+    // Filtrado por Stock
+    if (filters.inStockOnly) {
+      products = products.filter(p => p.inStock);
+    }
+    // Filtrado por Precio
+    products = products.filter(p => p.price <= filters.maxPrice);
+
+    setFilteredProducts(products);
+
+  }, [filters, allProducts]);
+
+
+  // --- CÁLCULO DE FILTROS DINÁMICOS ---
+
+  const availableOptions = useMemo(() => {
+    const relevantProducts = filters.category
+      ? allProducts.filter(p => p.category === filters.category)
+      : allProducts;
+
+    const sizes = new Set(relevantProducts.map(p => p.size).filter(Boolean));
+    const colors = new Set(relevantProducts.map(p => p.color).filter(Boolean));
+    const categories = new Set(allProducts.map(p => p.category));
+
+    return {
+      sizes: Array.from(sizes).sort(),
+      colors: Array.from(colors).sort(),
+      categories: Array.from(categories).sort(),
+    };
+  }, [allProducts, filters.category]);
+
+
+  // --- MANEJADORES DE EVENTOS ---
+
+  const handleCategoryChange = (category) => {
+    setFilters(prev => ({...prev, category: prev.category === category ? null : category }));
+    // Actualiza la URL
+    if (filters.category === category) {
+      searchParams.delete('categoria');
+    } else {
+      searchParams.set('categoria', category);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleCheckboxChange = (filterType, value) => {
+    setFilters(prev => {
+      const currentValues = prev[filterType];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(item => item !== value)
+        : [...currentValues, value];
+      return { ...prev, [filterType]: newValues };
+    });
+  };
+
+  const handleStockChange = (e) => {
+    setFilters(prev => ({ ...prev, inStockOnly: e.target.checked }));
+  };
+  
+  const handlePriceChange = (e) => {
+    setFilters(prev => ({ ...prev, maxPrice: Number(e.target.value) }));
+  }
+
+  const clearFilters = () => {
+    setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: 100 });
+    setSearchParams({});
+  };
+
+  // --- RENDERIZADO (VISTA) ---
+
   return (
-    <section className="max-w-container mx-auto px-4 py-16">
-      <h1 className="text-2xl font-semibold text-brand-text">Catálogo</h1>
-      <p className="mt-4 text-sm text-brand-text/70">
-        Esta sección estará disponible próximamente.
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Catálogo</h1>
+      <p className="text-gray-600 mb-8">
+        Mostrando {filteredProducts.length} de {allProducts.length} productos.
       </p>
-    </section>
+
+      <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
+        {/* --- Columna de Filtros (Izquierda) --- */}
+        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0">
+          <div className="sticky top-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Filtros</h2>
+              <button onClick={clearFilters} className="text-sm font-medium text-blue-600 hover:text-blue-800">Limpiar</button>
+            </div>
+
+            <div className="space-y-6 border-t pt-6">
+              {/* Filtro de Categoría */}
+              <div>
+                <h3 className="font-semibold mb-2">Categoría</h3>
+                <div className="space-y-1">
+                  {availableOptions.categories.map(cat => (
+                    <button key={cat} onClick={() => handleCategoryChange(cat)} 
+                      className={`block w-full text-left px-2 py-1 rounded ${filters.category === cat ? 'bg-blue-100 font-semibold' : ''}`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Filtro de Disponibilidad */}
+              <div>
+                <h3 className="font-semibold mb-2">Disponibilidad</h3>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={filters.inStockOnly} onChange={handleStockChange} className="rounded" />
+                  En Stock
+                </label>
+              </div>
+
+              {/* Filtro de Precio */}
+              <div>
+                <h3 className="font-semibold mb-2">Precio</h3>
+                <input type="range" min="10" max="100" value={filters.maxPrice} onChange={handlePriceChange} className="w-full" />
+                <div className="text-sm text-gray-600 text-center">Hasta ${filters.maxPrice}</div>
+              </div>
+
+              {/* Filtro de Talle (dinámico) */}
+              {availableOptions.sizes.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Talle</h3>
+                  <div className="space-y-1">
+                    {availableOptions.sizes.map(size => (
+                      <label key={size} className="flex items-center gap-2">
+                        <input type="checkbox" value={size} checked={filters.sizes.includes(size)} onChange={() => handleCheckboxChange('sizes', size)} className="rounded" />
+                        {size}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtro de Color (dinámico) */}
+              {availableOptions.colors.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Color</h3>
+                  <div className="space-y-1">
+                    {availableOptions.colors.map(color => (
+                      <label key={color} className="flex items-center gap-2">
+                        <input type="checkbox" value={color} checked={filters.colors.includes(color)} onChange={() => handleCheckboxChange('colors', color)} className="rounded" />
+                        {color}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+
+        {/* --- Columna de Productos (Derecha) --- */}
+        <main className="flex-1">
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map(product => (
+                <ProductCard key={product.id} product={product} variant={"catalog"} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <h3 className="text-xl font-semibold">No se encontraron productos</h3>
+              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver más resultados.</p>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
   );
-};
+}
 
 export default Catalog;

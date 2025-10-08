@@ -22,15 +22,9 @@ const Catalog = () => {
   // --- ESTADOS ---
   const [allProducts, setAllProducts] = useState([]); // Lista maestra de productos
   const [filteredProducts, setFilteredProducts] = useState([]); // Lista que se muestra al usuario
-  const [filters, setFilters] = useState({
-    category: null,
-    sizes: [],
-    colors: [],
-    inStockOnly: false,
-    maxPrice: 100,
-  });
+  const [filters, setFilters] = useState({\n    category: null,\n    sizes: [],\n    colors: [],\n    inStockOnly: false,\n    maxPrice: 100,\n    query: '',\n  });
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();\n  useEffect(() => {\n    const q = searchParams.get('q') || '';\n    const categoryFromURL = searchParams.get('categoria');\n    setFilters(prev => ({ ...prev, query: q, category: categoryFromURL || prev.category }));\n  }, [searchParams]);
 
   // --- EFECTOS (LÓGICA) ---
 
@@ -40,13 +34,7 @@ const Catalog = () => {
     setAllProducts(mockProducts);
   }, []);
 
-  // 2. Sincroniza el parámetro 'categoria' de la URL con el estado de los filtros
-  useEffect(() => {
-    const categoryFromURL = searchParams.get('categoria');
-    if (categoryFromURL) {
-      setFilters(prev => ({ ...prev, category: categoryFromURL }));
-    }
-  }, [searchParams]);
+  
 
   // 3. El "MOTOR" de filtrado: se ejecuta cada vez que cambian los filtros o la lista de productos
   useEffect(() => {
@@ -71,7 +59,7 @@ const Catalog = () => {
     // Filtrado por Precio
     products = products.filter(p => p.price <= filters.maxPrice);
 
-    setFilteredProducts(products);
+    // Text search filter\n    if (filters.query && filters.query.trim()) {\n      const term = filters.query.toLowerCase();\n      products = products.filter(p => {\n        const fields = [p.name, p.category, p.color, p.size].filter(Boolean).join(' ').toLowerCase();\n        return fields.includes(term);\n      });\n    }\n\n    setFilteredProducts(products);
 
   }, [filters, allProducts]);
 
@@ -233,3 +221,4 @@ const Catalog = () => {
 }
 
 export default Catalog;
+

@@ -1,6 +1,7 @@
 // src/components/ProductCard.jsx
 
 import React from 'react';
+import { useCart } from '../../context/CartContext';
 
 const EditIcon = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -9,13 +10,28 @@ const EditIcon = (props) => (
   </svg>
 );
 
-const ProductCard = ({ product, variant = 'catalog' }) => { // Le agreguÃ© el valor por defecto
+const ProductCard = ({ product, variant = 'catalog' }) => { // Le agregué el valor por defecto
+  const { addItem } = useCart();
+
+  const handleAdd = () => {
+    if (!product) return;
+    addItem({
+      id: product.id || product.name,
+      name: product.name,
+      price: product.price || 0,
+      image: product.image,
+      color: product.color,
+      size: product.size,
+      quantity: 1,
+    });
+  };
+
   return (
-    // ðŸ‘‡ CAMBIO #1: Agregamos 'group' y 'relative'
+    // CAMBIO #1: Agregamos 'group' y 'relative'
     <div className="group relative bg-[#E2DCD4] rounded-lg p-4 shadow-sm flex flex-col h-full overflow-hidden">
     
       {/* --- Icono de Editar (Solo para Admin) --- */}
-      {/* Esto ahora funcionarÃ¡ bien gracias al 'relative' del padre */}
+      {/* Esto ahora funcionará bien gracias al 'relative' del padre */}
       {variant === 'admin' && (
         <button className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 z-10">
           <EditIcon />
@@ -32,15 +48,16 @@ const ProductCard = ({ product, variant = 'catalog' }) => { // Le agreguÃ© el va
         <div className="h-4 w-4 rounded-full bg-black border"></div>
       </div>
       
-      {/* --- BotÃ³n "Agregar al carrito" (Solo para CatÃ¡logo con Hover Effect) --- */}
+      {/* --- Botón "Agregar al carrito" (Solo para Catálogo con Hover Effect) --- */}
       {variant === 'catalog' && (
-        // ðŸ‘‡ CAMBIO #2: Agregamos la lÃ³gica de hover a este div tambiÃ©n
+        // CAMBIO #2: Agregamos la lógica de hover a este div también
         <div 
           className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/50 to-transparent
                      opacity-0 transform translate-y-full 
                      transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0"
         >
           <button 
+            onClick={handleAdd}
             className="w-full bg-brand-blue text-white py-2 rounded-lg"
           >
             Agregar al carrito

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, NavLink, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import logoUade from "../../assets/logouadestore.png";
 import { useCart } from "../../context/CartContext";
 
@@ -75,15 +75,36 @@ const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { toggle, items } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sp] = useSearchParams();
   const [query, setQuery] = useState("");
 
   const toggleNav = () => setIsNavOpen((open) => !open);
   const toggleSearch = () => setIsSearchOpen((open) => !open);
 
+  // Mantiene el input sincronizado con la URL
+  // útil al volver/adelantar o compartir links
+  useEffect(() => {
+    const q = sp.get('q') || '';
+    setQuery(q);
+  }, [location.search]);
+
+  // Búsqueda en vivo: navega/actualiza resultados mientras se escribe
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const q = (query || '').trim();
+      const target = q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo';
+      if (!(location.pathname === '/catalogo' && location.search === (q ? `?q=${encodeURIComponent(q)}` : ''))) {
+        navigate(target, { replace: location.pathname === '/catalogo' });
+      }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [query]);
+
   const onSubmitSearch = (e) => {
     e.preventDefault();
-    const q = (query || "").trim();
-    navigate(q ? `/catalogo?q=${encodeURIComponent(q)}` : "/catalogo");
+    const q = (query || '').trim();
+    navigate(q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo');
     setIsSearchOpen(false);
   };
 
@@ -229,3 +250,4 @@ const Header = () => {
 };
 
 export default Header;
+

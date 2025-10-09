@@ -5,75 +5,86 @@ import { useSearchParams } from 'react-router-dom';
 // --- DATOS DE MUESTRA (Reemplazar con tu llamada a la API) ---
 const mockProducts = [
   { id: 1, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: true, size: 'M', color: 'Gris' },
-  { id: 2, name: 'Remera UADE', category: 'Nuestros B√°sicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
-  { id: 3, name: 'Cuaderno Rayado', category: 'Librer√≠a', price: 12, inStock: true, size: null, color: 'Negro' },
-  { id: 4, name: 'Botella T√©rmica', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
-  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros B√°sicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
+  { id: 2, name: 'Remera UADE', category: 'Nuestros B·sicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
+  { id: 3, name: 'Cuaderno Rayado', category: 'LibrerÌa', price: 12, inStock: true, size: null, color: 'Negro' },
+  { id: 4, name: 'Botella TÈrmica', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
+  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros B·sicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
   { id: 6, name: 'Buzo UADE Azul', category: 'Bestsellers', price: 54, inStock: true, size: 'L', color: 'Azul' },
   { id: 7, name: 'Gorra UADE', category: 'Accesorios', price: 18, inStock: true, size: null, color: 'Negro' },
-  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros B√°sicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
+  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros B·sicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
   { id: 9, name: 'Taza UADE', category: 'Accesorios', price: 15, inStock: true, size: null, color: 'Blanco' },
   { id: 10, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: false, size: 'S', color: 'Gris' },
 ];
-
-// --- P√ÅGINA PRINCIPAL DEL CAT√ÅLOGO ---
 
 const Catalog = () => {
   // --- ESTADOS ---
   const [allProducts, setAllProducts] = useState([]); // Lista maestra de productos
   const [filteredProducts, setFilteredProducts] = useState([]); // Lista que se muestra al usuario
-  const [filters, setFilters] = useState({\n    category: null,\n    sizes: [],\n    colors: [],\n    inStockOnly: false,\n    maxPrice: 100,\n    query: '',\n  });
+  const [filters, setFilters] = useState({
+    category: null,
+    sizes: [],
+    colors: [],
+    inStockOnly: false,
+    maxPrice: 100,
+    query: '',
+  });
 
-  const [searchParams, setSearchParams] = useSearchParams();\n  useEffect(() => {\n    const q = searchParams.get('q') || '';\n    const categoryFromURL = searchParams.get('categoria');\n    setFilters(prev => ({ ...prev, query: q, category: categoryFromURL || prev.category }));\n  }, [searchParams]);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // --- EFECTOS (L√ìGICA) ---
-
-  // 1. Simula la carga inicial de datos (reemplazar con fetch real)
+  // carga inicial de datos (reemplazar con fetch real)
   useEffect(() => {
-    // Aqu√≠ har√≠as tu llamada a la API: fetch('/api/products').then(...)
     setAllProducts(mockProducts);
   }, []);
 
-  
+  // sincroniza filtros con la URL (q y categoria)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    const categoryFromURL = searchParams.get('categoria') || null;
+    setFilters((prev) => ({ ...prev, query: q, category: categoryFromURL }));
+  }, [searchParams]);
 
-  // 3. El "MOTOR" de filtrado: se ejecuta cada vez que cambian los filtros o la lista de productos
+  // motor de filtrado
   useEffect(() => {
     let products = [...allProducts];
 
-    // Filtrado por categor√≠a
     if (filters.category) {
-      products = products.filter(p => p.category === filters.category);
+      products = products.filter((p) => p.category === filters.category);
     }
-    // Filtrado por Talle (si se seleccion√≥ al menos uno)
     if (filters.sizes.length > 0) {
-      products = products.filter(p => p.size && filters.sizes.includes(p.size));
+      products = products.filter((p) => p.size && filters.sizes.includes(p.size));
     }
-    // Filtrado por Color (si se seleccion√≥ al menos uno)
     if (filters.colors.length > 0) {
-      products = products.filter(p => p.color && filters.colors.includes(p.color));
+      products = products.filter((p) => p.color && filters.colors.includes(p.color));
     }
-    // Filtrado por Stock
     if (filters.inStockOnly) {
-      products = products.filter(p => p.inStock);
+      products = products.filter((p) => p.inStock);
     }
-    // Filtrado por Precio
-    products = products.filter(p => p.price <= filters.maxPrice);
+    products = products.filter((p) => p.price <= filters.maxPrice);
 
-    // Text search filter\n    if (filters.query && filters.query.trim()) {\n      const term = filters.query.toLowerCase();\n      products = products.filter(p => {\n        const fields = [p.name, p.category, p.color, p.size].filter(Boolean).join(' ').toLowerCase();\n        return fields.includes(term);\n      });\n    }\n\n    setFilteredProducts(products);
+    // B˙squeda por texto
+    if (filters.query && filters.query.trim()) {
+      const term = filters.query.toLowerCase();
+      products = products.filter((p) => {
+        const fields = [p.name, p.category, p.color, p.size]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return fields.includes(term);
+      });
+    }
 
+    setFilteredProducts(products);
   }, [filters, allProducts]);
 
-
-  // --- C√ÅLCULO DE FILTROS DIN√ÅMICOS ---
-
+  // opciones din·micas
   const availableOptions = useMemo(() => {
     const relevantProducts = filters.category
-      ? allProducts.filter(p => p.category === filters.category)
+      ? allProducts.filter((p) => p.category === filters.category)
       : allProducts;
 
-    const sizes = new Set(relevantProducts.map(p => p.size).filter(Boolean));
-    const colors = new Set(relevantProducts.map(p => p.color).filter(Boolean));
-    const categories = new Set(allProducts.map(p => p.category));
+    const sizes = new Set(relevantProducts.map((p) => p.size).filter(Boolean));
+    const colors = new Set(relevantProducts.map((p) => p.color).filter(Boolean));
+    const categories = new Set(allProducts.map((p) => p.category));
 
     return {
       sizes: Array.from(sizes).sort(),
@@ -82,12 +93,9 @@ const Catalog = () => {
     };
   }, [allProducts, filters.category]);
 
-
-  // --- MANEJADORES DE EVENTOS ---
-
+  // manejadores
   const handleCategoryChange = (category) => {
-    setFilters(prev => ({...prev, category: prev.category === category ? null : category }));
-    // Actualiza la URL
+    setFilters((prev) => ({ ...prev, category: prev.category === category ? null : category }));
     if (filters.category === category) {
       searchParams.delete('categoria');
     } else {
@@ -97,33 +105,32 @@ const Catalog = () => {
   };
 
   const handleCheckboxChange = (filterType, value) => {
-    setFilters(prev => {
+    setFilters((prev) => {
       const currentValues = prev[filterType];
       const newValues = currentValues.includes(value)
-        ? currentValues.filter(item => item !== value)
+        ? currentValues.filter((item) => item !== value)
         : [...currentValues, value];
       return { ...prev, [filterType]: newValues };
     });
   };
 
   const handleStockChange = (e) => {
-    setFilters(prev => ({ ...prev, inStockOnly: e.target.checked }));
+    setFilters((prev) => ({ ...prev, inStockOnly: e.target.checked }));
   };
-  
+
   const handlePriceChange = (e) => {
-    setFilters(prev => ({ ...prev, maxPrice: Number(e.target.value) }));
-  }
+    setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) }));
+  };
 
   const clearFilters = () => {
-    setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: 100 });
+    setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: 100, query: '' });
     setSearchParams({});
   };
 
-  // --- RENDERIZADO (VISTA) ---
-
+  // vista
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Cat√°logo</h1>
+      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Cat·logo</h1>
       <p className="text-gray-600 mb-8">
         Mostrando {filteredProducts.length} de {allProducts.length} productos.
       </p>
@@ -138,19 +145,22 @@ const Catalog = () => {
             </div>
 
             <div className="space-y-6 border-t pt-6">
-              {/* Filtro de Categor√≠a */}
+              {/* Filtro de CategorÌa */}
               <div>
-                <h3 className="font-semibold mb-2">Categor√≠a</h3>
+                <h3 className="font-semibold mb-2">CategorÌa</h3>
                 <div className="space-y-1">
-                  {availableOptions.categories.map(cat => (
-                    <button key={cat} onClick={() => handleCategoryChange(cat)} 
-                      className={`block w-full text-left px-2 py-1 rounded ${filters.category === cat ? 'bg-blue-100 font-semibold' : ''}`}>
+                  {availableOptions.categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => handleCategoryChange(cat)}
+                      className={`block w-full text-left px-2 py-1 rounded ${filters.category === cat ? 'bg-blue-100 font-semibold' : ''}`}
+                    >
                       {cat}
                     </button>
                   ))}
                 </div>
               </div>
-              
+
               {/* Filtro de Disponibilidad */}
               <div>
                 <h3 className="font-semibold mb-2">Disponibilidad</h3>
@@ -167,12 +177,12 @@ const Catalog = () => {
                 <div className="text-sm text-gray-600 text-center">Hasta ${filters.maxPrice}</div>
               </div>
 
-              {/* Filtro de Talle (din√°mico) */}
+              {/* Filtro de Talle (din·mico) */}
               {availableOptions.sizes.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Talle</h3>
                   <div className="space-y-1">
-                    {availableOptions.sizes.map(size => (
+                    {availableOptions.sizes.map((size) => (
                       <label key={size} className="flex items-center gap-2">
                         <input type="checkbox" value={size} checked={filters.sizes.includes(size)} onChange={() => handleCheckboxChange('sizes', size)} className="rounded" />
                         {size}
@@ -182,12 +192,12 @@ const Catalog = () => {
                 </div>
               )}
 
-              {/* Filtro de Color (din√°mico) */}
+              {/* Filtro de Color (din·mico) */}
               {availableOptions.colors.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Color</h3>
                   <div className="space-y-1">
-                    {availableOptions.colors.map(color => (
+                    {availableOptions.colors.map((color) => (
                       <label key={color} className="flex items-center gap-2">
                         <input type="checkbox" value={color} checked={filters.colors.includes(color)} onChange={() => handleCheckboxChange('colors', color)} className="rounded" />
                         {color}
@@ -204,21 +214,21 @@ const Catalog = () => {
         <main className="flex-1">
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map(product => (
+              {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} variant={"catalog"} />
               ))}
             </div>
           ) : (
             <div className="text-center py-16">
               <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver m√°s resultados.</p>
+              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver m·s resultados.</p>
             </div>
           )}
         </main>
       </div>
     </div>
   );
-}
+};
 
 export default Catalog;
 

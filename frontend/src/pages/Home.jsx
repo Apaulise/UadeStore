@@ -8,17 +8,17 @@ import tiendaInteriorImg from "../assets/interioruade.jpg";
 import tiendaExteriorImg from "../assets/exterioruade.jpg";
 import { Link } from "react-router-dom";
 
-// Alias para categorÃ­as
+// Alias para categorías
 const basicosImg = logouadeImg;
 const bestsellersImg = logouadeImg;
 const accesoriosImg = logouadeImg;
 const libreriaImg = logouadeImg;
 
 const categories = [
-  { name: "Nuestros BÃ¡sicos", image: basicosImg },
-  { name: "Bestsellers", image: bestsellersImg },
-  { name: "Accesorios", image: accesoriosImg },
-  { name: "LibrerÃ­a", image: libreriaImg },
+  { name: "Nuestros Básicos", image: basicosImg, slug: "nuestros-basicos" },
+  { name: "Bestsellers", image: bestsellersImg, slug: "bestsellers" },
+  { name: "Accesorios", image: accesoriosImg, slug: "accesorios" },
+  { name: "Librería", image: libreriaImg, slug: "libreria" },
 ];
 
 const Home = () => {
@@ -81,7 +81,7 @@ const Home = () => {
             {categories.map((category) => (
               <Link
                 key={category.name}
-                to={`/catalogo?categoria=${encodeURIComponent(category.name)}`}
+                to={`/catalogo?categoria=${category.slug}` }
                 className="flex flex-col items-center gap-3 rounded-xl bg-white p-4 text-center shadow-sm transition hover:shadow-md"
               >
                 <img
@@ -190,3 +190,8 @@ const Home = () => {
 };
 
 export default Home;
+
+
+
+
+

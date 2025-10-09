@@ -1,11 +1,12 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, NavLink, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import logoUade from "../../assets/logouadestore.png";
+import { useCart } from "../../context/CartContext";
 
 const navItems = [
   { to: "/", label: "Inicio" },
-  { to: "/catalogo", label: "CatÃ¡logo" },
-  { to: "/admin", label: "AdministraciÃ³n" },
+  { to: "/catalogo", label: "Catálogo" },
+  { to: "/admin", label: "Administración" },
 ];
 
 const linkBaseClasses =
@@ -72,9 +73,40 @@ const BagIcon = (props) => (
 const Header = () => {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { toggle, items } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [sp] = useSearchParams();
+  const [query, setQuery] = useState("");
 
   const toggleNav = () => setIsNavOpen((open) => !open);
   const toggleSearch = () => setIsSearchOpen((open) => !open);
+
+  // Mantiene el input sincronizado con la URL
+  // útil al volver/adelantar o compartir links
+  useEffect(() => {
+    const q = sp.get('q') || '';
+    setQuery(q);
+  }, [location.search]);
+
+  // Búsqueda en vivo: navega/actualiza resultados mientras se escribe
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const q = (query || '').trim();
+      const target = q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo';
+      if (!(location.pathname === '/catalogo' && location.search === (q ? `?q=${encodeURIComponent(q)}` : ''))) {
+        navigate(target, { replace: location.pathname === '/catalogo' });
+      }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const onSubmitSearch = (e) => {
+    e.preventDefault();
+    const q = (query || '').trim();
+    navigate(q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo');
+    setIsSearchOpen(false);
+  };
 
   return (
     <header className="bg-brand-cream text-brand-text">
@@ -100,7 +132,7 @@ const Header = () => {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <form className="relative" role="search">
+            <form className="relative" role="search" onSubmit={onSubmitSearch}>
               <label className="sr-only" htmlFor="desktop-search">
                 Buscar productos
               </label>
@@ -109,18 +141,26 @@ const Header = () => {
                 id="desktop-search"
                 type="search"
                 placeholder="Buscar"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 className="w-56 rounded-full border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-brand-text placeholder:text-brand-text/50 focus:outline-none focus:ring-2 focus:ring-black/30"
-                // TODO: Conectar con la bÃºsqueda real del mÃ³dulo CORE
               />
             </form>
             <button
               type="button"
               className="rounded-full p-2 text-brand-text transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               aria-label="Ver bolsa de compras"
+              onClick={toggle}
             >
-              <BagIcon className="h-5 w-5" />
+              <div className="relative">
+                <BagIcon className="h-5 w-5" />
+                {items.length > 0 && (
+                  <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                    {items.length}
+                  </span>
+                )}
+              </div>
             </button>
-            {/* TODO: Integrar el nombre real del usuario desde el CORE */}
             <span className="text-sm font-semibold">Camila</span>
           </div>
 
@@ -139,20 +179,20 @@ const Header = () => {
               type="button"
               className="rounded-full p-2 transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               aria-label="Ver bolsa de compras"
+              onClick={toggle}
             >
               <BagIcon className="h-5 w-5" />
             </button>
-            {/* TODO: Integrar el nombre real del usuario desde el CORE */}
             <span className="text-sm font-semibold">Camila</span>
             <button
               type="button"
               onClick={toggleNav}
-              aria-label="Abrir menÃº principal"
+              aria-label="Abrir menú principal"
               aria-expanded={isNavOpen}
               aria-controls="primary-navigation"
               className="rounded-full p-2 transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             >
-              <span className="sr-only">MenÃº</span>
+              <span className="sr-only">Menú</span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -175,6 +215,7 @@ const Header = () => {
           <form
             id="mobile-search"
             role="search"
+            onSubmit={onSubmitSearch}
             className="mt-3 flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-brand-text shadow-sm lg:hidden"
           >
             <label className="sr-only" htmlFor="mobile-search-input">
@@ -185,8 +226,9 @@ const Header = () => {
               id="mobile-search-input"
               type="search"
               placeholder="Buscar"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               className="w-full border-none bg-transparent text-sm focus:outline-none"
-              // TODO: Conectar con la bÃºsqueda real del mÃ³dulo CORE
             />
           </form>
         )}
@@ -208,3 +250,4 @@ const Header = () => {
 };
 
 export default Header;
+

@@ -2,7 +2,7 @@ import * as productService from '../services/product.service.js';
 
 export const getProductsController = async (req, res) => {
   try {
-    const products = await productService.getAllProducts();
+    const products = await productService.getAllArticulos();
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: 'Error al obtener los productos', error: error.message });

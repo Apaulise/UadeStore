@@ -10,7 +10,7 @@ const EditIcon = (props) => (
   </svg>
 );
 
-const ProductCard = ({ product, variant = 'catalog' }) => { // Le agregué el valor por defecto
+const ProductCard = ({ product, variant = 'catalog' }) => { // Le agreguï¿½ el valor por defecto
   const { addItem } = useCart();
 
   const handleAdd = () => {
@@ -31,7 +31,7 @@ const ProductCard = ({ product, variant = 'catalog' }) => { // Le agregué el val
     <div className="group relative bg-[#E2DCD4] rounded-lg p-4 shadow-sm flex flex-col h-full overflow-hidden">
     
       {/* --- Icono de Editar (Solo para Admin) --- */}
-      {/* Esto ahora funcionará bien gracias al 'relative' del padre */}
+      {/* Esto ahora funcionarï¿½ bien gracias al 'relative' del padre */}
       {variant === 'admin' && (
         <button className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 z-10">
           <EditIcon />
@@ -48,9 +48,9 @@ const ProductCard = ({ product, variant = 'catalog' }) => { // Le agregué el val
         <div className="h-4 w-4 rounded-full bg-black border"></div>
       </div>
       
-      {/* --- Botón "Agregar al carrito" (Solo para Catálogo con Hover Effect) --- */}
+      {/* --- Botï¿½n "Agregar al carrito" (Solo para CatÃ¡logo con Hover Effect) --- */}
       {variant === 'catalog' && (
-        // CAMBIO #2: Agregamos la lógica de hover a este div también
+        // CAMBIO #2: Agregamos la lÃ³gica de hover a este div tambiÃ©n
         <div 
           className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/50 to-transparent
                      opacity-0 transform translate-y-full 

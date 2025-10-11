@@ -1,7 +1,7 @@
 // frontend/src/services/api.js
 //para centralizar llamadas (luego lo usarás en páginas/contexts):
 //Con esto, cuando tengas el backend levantado, el front ya puede consumir datos reales sin tocar más configuración.
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
 
 async function http(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

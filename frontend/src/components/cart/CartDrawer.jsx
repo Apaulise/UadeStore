@@ -42,7 +42,7 @@ const CartDrawer = () => {
 
         <div className="divide-y overflow-y-auto px-5">
           {items.length === 0 && (
-            <p className="py-8 text-center text-sm text-gray-600">Tu carrito está vacío.</p>
+            <p className="py-8 text-center text-sm text-gray-600">Tu carrito esta vacio.</p>
           )}
 
           {items.map((item, idx) => (

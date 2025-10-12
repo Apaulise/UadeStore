@@ -8,17 +8,17 @@ import tiendaInteriorImg from "../assets/interioruade.jpg";
 import tiendaExteriorImg from "../assets/exterioruade.jpg";
 import { Link } from "react-router-dom";
 
-// Alias para categorÌas
+// Alias para categorÔøΩas
 const basicosImg = logouadeImg;
 const bestsellersImg = logouadeImg;
 const accesoriosImg = logouadeImg;
 const libreriaImg = logouadeImg;
 
 const categories = [
-  { name: "Nuestros B·sicos", image: basicosImg, slug: "nuestros-basicos" },
+  { name: "Nuestros Basicos", image: basicosImg, slug: "nuestros-basicos" },
   { name: "Bestsellers", image: bestsellersImg, slug: "bestsellers" },
   { name: "Accesorios", image: accesoriosImg, slug: "accesorios" },
-  { name: "LibrerÌa", image: libreriaImg, slug: "libreria" },
+  { name: "Libreria", image: libreriaImg, slug: "libreria" },
 ];
 
 const Home = () => {
@@ -103,13 +103,13 @@ const Home = () => {
               <p className="mt-4 text-gray-600">
                 En UADE, sabemos que tus metas son grandes. Por eso, creamos un accesorio a la altura de tus desaf√≠os‚Ä¶
               </p>
-              <div className="mt-6 flex justify-center">
-                <button
-                  type="button"
+            <div className="mt-6 flex justify-center">
+                <Link
+                  to="/catalogo"
                   className="rounded-full bg-gray-200 px-8 py-3 font-semibold text-gray-800 transition hover:bg-gray-300"
                 >
                   Comprar Ahora
-                </button>
+                </Link>
               </div>
             </div>
 

@@ -5,8 +5,8 @@ import { useCart } from "../../context/CartContext";
 
 const navItems = [
   { to: "/", label: "Inicio" },
-  { to: "/catalogo", label: "Catálogo" },
-  { to: "/admin", label: "Administración" },
+  { to: "/catalogo", label: "Catalogo" },
+  { to: "/admin", label: "Administracion" },
 ];
 
 const linkBaseClasses =
@@ -83,13 +83,13 @@ const Header = () => {
   const toggleSearch = () => setIsSearchOpen((open) => !open);
 
   // Mantiene el input sincronizado con la URL
-  // útil al volver/adelantar o compartir links
+  // ï¿½til al volver/adelantar o compartir links
   useEffect(() => {
     const q = sp.get('q') || '';
     setQuery(q);
   }, [location.search]);
 
-  // Búsqueda en vivo: navega/actualiza resultados mientras se escribe
+  // Bï¿½squeda en vivo: navega/actualiza resultados mientras se escribe
   useEffect(() => {
     const id = setTimeout(() => {
       const q = (query || '').trim();
@@ -187,12 +187,12 @@ const Header = () => {
             <button
               type="button"
               onClick={toggleNav}
-              aria-label="Abrir menú principal"
+              aria-label="Abrir menu principal"
               aria-expanded={isNavOpen}
               aria-controls="primary-navigation"
               className="rounded-full p-2 transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             >
-              <span className="sr-only">Menú</span>
+              <span className="sr-only">menu</span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"

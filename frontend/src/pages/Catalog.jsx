@@ -5,13 +5,13 @@ import { useSearchParams } from 'react-router-dom';
 // --- DATOS DE MUESTRA (Reemplazar con tu llamada a la API) ---
 const mockProducts = [
   { id: 1, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: true, size: 'M', color: 'Gris' },
-  { id: 2, name: 'Remera UADE', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
-  { id: 3, name: 'Cuaderno Rayado', category: 'Librería', price: 12, inStock: true, size: null, color: 'Negro' },
-  { id: 4, name: 'Botella Térmica', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
-  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
+  { id: 2, name: 'Remera UADE', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
+  { id: 3, name: 'Cuaderno Rayado', category: 'Libreria', price: 12, inStock: true, size: null, color: 'Negro' },
+  { id: 4, name: 'Botella Libreria', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
+  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
   { id: 6, name: 'Buzo UADE Azul', category: 'Bestsellers', price: 54, inStock: true, size: 'L', color: 'Azul' },
   { id: 7, name: 'Gorra UADE', category: 'Accesorios', price: 18, inStock: true, size: null, color: 'Negro' },
-  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
+  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
   { id: 9, name: 'Taza UADE', category: 'Accesorios', price: 15, inStock: true, size: null, color: 'Blanco' },
   { id: 10, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: false, size: 'S', color: 'Gris' },
 ];
@@ -61,7 +61,7 @@ const Catalog = () => {
     }
     products = products.filter((p) => p.price <= filters.maxPrice);
 
-    // Búsqueda por texto
+    // Bï¿½squeda por texto
     if (filters.query && filters.query.trim()) {
       const term = filters.query.toLowerCase();
       products = products.filter((p) => {
@@ -76,7 +76,7 @@ const Catalog = () => {
     setFilteredProducts(products);
   }, [filters, allProducts]);
 
-  // opciones dinámicas
+  // opciones dinï¿½micas
   const availableOptions = useMemo(() => {
     const relevantProducts = filters.category
       ? allProducts.filter((p) => p.category === filters.category)
@@ -130,7 +130,7 @@ const Catalog = () => {
   // vista
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Catálogo</h1>
+      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Catalogo</h1>
       <p className="text-gray-600 mb-8">
         Mostrando {filteredProducts.length} de {allProducts.length} productos.
       </p>
@@ -145,9 +145,9 @@ const Catalog = () => {
             </div>
 
             <div className="space-y-6 border-t pt-6">
-              {/* Filtro de Categoría */}
+              {/* Filtro de Categoria */}
               <div>
-                <h3 className="font-semibold mb-2">Categoría</h3>
+                <h3 className="font-semibold mb-2">Categoria</h3>
                 <div className="space-y-1">
                   {availableOptions.categories.map((cat) => (
                     <button
@@ -177,7 +177,7 @@ const Catalog = () => {
                 <div className="text-sm text-gray-600 text-center">Hasta ${filters.maxPrice}</div>
               </div>
 
-              {/* Filtro de Talle (dinámico) */}
+              {/* Filtro de Talle (dinï¿½mico) */}
               {availableOptions.sizes.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Talle</h3>
@@ -192,7 +192,7 @@ const Catalog = () => {
                 </div>
               )}
 
-              {/* Filtro de Color (dinámico) */}
+              {/* Filtro de Color (dinï¿½mico) */}
               {availableOptions.colors.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Color</h3>
@@ -221,7 +221,7 @@ const Catalog = () => {
           ) : (
             <div className="text-center py-16">
               <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver más resultados.</p>
+              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver mas resultados.</p>
             </div>
           )}
         </main>

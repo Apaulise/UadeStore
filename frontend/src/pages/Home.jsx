@@ -1,18 +1,19 @@
 // src/pages/Home.jsx
-import heroShirt from "../assets/hero-shirt.png";
-import logouadeImg from "../assets/logouade.jpg";
+import heroShirt from "../assets/RemeraInicio.png";
+import libroUADE from "../assets/LibreUADE.png";
+import termoUADE from "../assets/termoUADE.png";
 import remeraUadeImg from "../assets/remerauade.jpg";
 import buzoUadeImg from "../assets/buzouade.jpg";
-import { useEffect, useRef, useState } from "react";
-import tiendaInteriorImg from "../assets/interioruade.jpg";
-import tiendaExteriorImg from "../assets/exterioruade.jpg";
+import bolsaUADE from "../assets/BolsaUADE.png";
+import tiendaInteriorImg from "../assets/StorePorDentro.png";
+import tiendaExteriorImg from "../assets/StorePorFuera.png";
 import { Link } from "react-router-dom";
 
 // Alias para categor�as
-const basicosImg = logouadeImg;
-const bestsellersImg = logouadeImg;
-const accesoriosImg = logouadeImg;
-const libreriaImg = logouadeImg;
+const basicosImg = remeraUadeImg;
+const bestsellersImg = buzoUadeImg;
+const accesoriosImg = termoUADE;
+const libreriaImg = libroUADE;
 
 const categories = [
   { name: "Nuestros Basicos", image: basicosImg, slug: "nuestros-basicos" },
@@ -22,29 +23,6 @@ const categories = [
 ];
 
 const Home = () => {
-  const slides = [
-    { src: remeraUadeImg, alt: "Remera UADE" },
-    { src: buzoUadeImg, alt: "Buzo UADE" },
-  ];
-
-  const [current, setCurrent] = useState(0);
-  const carouselRef = useRef(null);
-
-  const prev = () => setCurrent((i) => (i === 0 ? slides.length - 1 : i - 1));
-  const next = () => setCurrent((i) => (i === slides.length - 1 ? 0 : i + 1));
-
-  const onKeyDown = (e) => {
-    if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); next(); }
-  };
-
-  useEffect(() => {
-    const node = carouselRef.current;
-    if (!node) return;
-    node.addEventListener("keydown", onKeyDown);
-    return () => node.removeEventListener("keydown", onKeyDown);
-  }, [slides.length]);
-
   return (
     <>
       {/* HERO */}
@@ -96,13 +74,12 @@ const Home = () => {
             ))}
           </div>
 
-          {/* Nuevo lanzamiento + Carrusel */}
+          {/* Nuevo lanzamiento */}
           <section className="mt-12 grid grid-cols-1 gap-8 md:mt-16 md:grid-cols-2">
             <div className="flex flex-col justify-center rounded-xl bg-white p-8 text-center shadow-lg lg:p-12">
               <h2 className="text-3xl font-bold text-gray-900">Nuevo Lanzamiento</h2>
               <p className="mt-4 text-gray-600">
-                En UADE, sabemos que tus metas son grandes. Por eso, creamos un accesorio a la altura de tus desafíos…
-              </p>
+                En UADE, sabemos que tus metas son grandes. Por eso, creamos un accesorio a la altura de tus desafíos. Presentamos el bolso que no solo transporta tus libros y tu notebook, sino también tus ideas, proyectos y el orgullo de pertenecer a una gran universidad.              </p>
             <div className="mt-6 flex justify-center">
                 <Link
                   to="/catalogo"
@@ -113,51 +90,14 @@ const Home = () => {
               </div>
             </div>
 
-            <div
-              className="relative min-h-[300px] overflow-hidden rounded-xl bg-white shadow-lg"
-              role="region"
-              aria-roledescription="carousel"
-              aria-label="Galería UADE"
-              ref={carouselRef}
-              tabIndex={0}
-            >
+            <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-md">
               <img
-                src={slides[current].src}
-                alt={slides[current].alt}
-                className="h-full w-full object-cover"
-                role="group"
-                aria-label={`Slide ${current + 1} de ${slides.length}`}
-                loading={current === 0 ? "eager" : "lazy"}
+                src={bolsaUADE}
+                alt="Bolsa UADE"
+                className="w-[80%] object-contain"
+                loading="lazy"
                 decoding="async"
               />
-              <button
-                type="button"
-                onClick={prev}
-                aria-label="Anterior"
-                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-gray-900 backdrop-blur-sm transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-800"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" /></svg>
-              </button>
-              <button
-                type="button"
-                onClick={next}
-                aria-label="Siguiente"
-                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-gray-900 backdrop-blur-sm transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-800"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" /></svg>
-              </button>
-              <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-2">
-                {slides.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setCurrent(i)}
-                    aria-label={`Ir al slide ${i + 1}`}
-                    aria-current={current === i}
-                    className={`pointer-events-auto h-2 w-2 rounded-full transition ${current === i ? "bg-gray-900" : "bg-gray-400/60 hover:bg-gray-500/80"} focus-visible:outline focus-visible:outline-2 focus-visible:outline-gray-800`}
-                  />
-                ))}
-              </div>
             </div>
           </section>
         </div>

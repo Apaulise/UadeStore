@@ -1,20 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/layout/ProductCard';
 import { useSearchParams } from 'react-router-dom';
-
-// --- DATOS DE MUESTRA (Reemplazar con tu llamada a la API) ---
-const mockProducts = [
-  { id: 1, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: true, size: 'M', color: 'Gris' },
-  { id: 2, name: 'Remera UADE', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
-  { id: 3, name: 'Cuaderno Rayado', category: 'Libreria', price: 12, inStock: true, size: null, color: 'Negro' },
-  { id: 4, name: 'Botella Libreria', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
-  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
-  { id: 6, name: 'Buzo UADE Azul', category: 'Bestsellers', price: 54, inStock: true, size: 'L', color: 'Azul' },
-  { id: 7, name: 'Gorra UADE', category: 'Accesorios', price: 18, inStock: true, size: null, color: 'Negro' },
-  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros Basicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
-  { id: 9, name: 'Taza UADE', category: 'Accesorios', price: 15, inStock: true, size: null, color: 'Blanco' },
-  { id: 10, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: false, size: 'S', color: 'Gris' },
-];
+import { products as mockProducts } from '../data/products';
 
 const Catalog = () => {
   // --- ESTADOS ---

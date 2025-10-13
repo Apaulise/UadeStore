@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 
 const CloseIcon = (props) => (
@@ -14,7 +15,14 @@ const TrashIcon = (props) => (
 );
 
 const CartDrawer = () => {
+  const navigate = useNavigate();
   const { items, isOpen, close, removeItem, increment, decrement, total } = useCart();
+
+  const handleCheckout = () => {
+    if (items.length === 0) return;
+    close();
+    navigate("/checkout");
+  };
 
   return (
     <div className={`fixed inset-0 z-50 ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!isOpen}>
@@ -86,7 +94,11 @@ const CartDrawer = () => {
             <span>Total:</span>
             <span>${total.toFixed(2)}</span>
           </div>
-          <button className="mt-3 w-full rounded-lg bg-[#1F3B67] py-2 text-white transition hover:brightness-110">
+          <button
+            onClick={handleCheckout}
+            disabled={items.length === 0}
+            className="mt-3 w-full rounded-lg bg-[#1F3B67] py-2 text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[#1F3B67]/50"
+          >
             Comprar
           </button>
         </div>

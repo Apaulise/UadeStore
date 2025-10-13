@@ -4,6 +4,8 @@ npm-debug.log*
 yarn.lock
 pnpm-lock.yaml
 package-lock.json
+package-lock.json
+package.json
 
 # Builds / cache
 dist/

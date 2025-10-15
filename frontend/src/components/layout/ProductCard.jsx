@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { useCart } from '../../context/CartContext';
 
 const EditIcon = (props) => (
@@ -33,19 +34,25 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
   );
 
   const handleAdd = () => {
-    addItem({
-      id: product.id || product.name,
-      name: product.name,
-      price: product.price || 0,
-      image: product.image,
-      color: product.color,
-      size: product.size,
-      quantity: 1,
-    });
+    try {
+      addItem({
+        id: product.id || product.name,
+        name: product.name,
+        price: product.price || 0,
+        image: product.image,
+        color: product.color,
+        size: product.size,
+        quantity: 1,
+      });
+      toast.success(`${product.name} agregado al carrito`);
+    } catch (error) {
+      console.error("Error al agregar al carrito:", error);
+      toast.error("No se pudo agregar el producto al carrito");
+    }
   };
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
+    <div className="relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
       {variant === 'admin' && (
         <button className="absolute right-2 top-2 z-10 rounded-full bg-white p-2 shadow-md transition hover:bg-gray-100">
           <EditIcon />
@@ -85,10 +92,10 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
       </Link>
 
       {variant === 'catalog' && (
-        <div className="absolute bottom-0 left-0 w-full translate-y-full transform bg-gradient-to-t from-black/50 to-transparent p-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="mt-4">
           <button
             onClick={handleAdd}
-            className="w-full rounded-lg bg-brand-blue py-2 font-semibold text-white transition hover:brightness-110"
+            className="w-full rounded-full bg-[#1E3763] py-2 font-semibold text-white transition duration-300 hover:bg-[linear-gradient(90deg,#1E3763_0%,rgba(255,255,255,0.85)_100%)] hover:text-[#1E3763]"
           >
             Agregar al carrito
           </button>

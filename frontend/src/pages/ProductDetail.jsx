@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { findProductById, products } from '../data/products';
 import { useCart } from '../context/CartContext';
 
@@ -107,16 +108,28 @@ const ProductDetail = () => {
   const accentColor = '#1F3B67';
 
   const handleAddToCart = () => {
-    if (isAddDisabled) return;
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      color: currentColor?.label ?? product.color ?? 'Sin color',
-      size: selectedSize ?? undefined,
-      quantity,
-    });
+    if (isAddDisabled) {
+      const errorMessage = !product.inStock
+        ? 'Este producto no tiene stock disponible'
+        : 'Selecciona un talle disponible antes de agregar al carrito';
+      toast.error(errorMessage);
+      return;
+    }
+    try {
+      addItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        color: currentColor?.label ?? product.color ?? 'Sin color',
+        size: selectedSize ?? undefined,
+        quantity,
+      });
+      toast.success(`${product.name} agregado al carrito`);
+    } catch (error) {
+      console.error('Error al agregar al carrito:', error);
+      toast.error('No se pudo agregar el producto al carrito');
+    }
   };
 
   const increaseQuantity = () => setQuantity((prev) => Math.min(prev + 1, 10));

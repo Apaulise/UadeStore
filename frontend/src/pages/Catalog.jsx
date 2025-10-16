@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/layout/ProductCard';
 import { useSearchParams } from 'react-router-dom';
-import { products as mockProducts } from '../data/products';
+import { products as mockProducts, resolveCategory, categoryToSlug } from '../data/products';
 
 const Catalog = () => {
   // --- ESTADOS ---
@@ -26,8 +26,20 @@ const Catalog = () => {
   // sincroniza filtros con la URL (q y categoria)
   useEffect(() => {
     const q = searchParams.get('q') || '';
-    const categoryFromURL = searchParams.get('categoria') || null;
-    setFilters((prev) => ({ ...prev, query: q, category: categoryFromURL }));
+    const categoryFromURL = searchParams.get('categoria');
+    const normalizedCategory = resolveCategory(categoryFromURL);
+
+    // Reseteamos colores/talles cuando la categoría cambia desde la URL
+    setFilters((prev) => {
+      const hasCategoryChanged = prev.category !== normalizedCategory;
+      return {
+        ...prev,
+        query: q,
+        category: normalizedCategory,
+        colors: hasCategoryChanged ? [] : prev.colors,
+        sizes: hasCategoryChanged ? [] : prev.sizes,
+      };
+    });
   }, [searchParams]);
 
   // motor de filtrado
@@ -82,13 +94,16 @@ const Catalog = () => {
 
   // manejadores
   const handleCategoryChange = (category) => {
-    setFilters((prev) => ({ ...prev, category: prev.category === category ? null : category }));
-    if (filters.category === category) {
-      searchParams.delete('categoria');
+    const nextCategory = filters.category === category ? null : category;
+    setFilters((prev) => ({ ...prev, category: nextCategory }));
+
+    const params = new URLSearchParams(searchParams);
+    if (!nextCategory) {
+      params.delete('categoria');
     } else {
-      searchParams.set('categoria', category);
+      params.set('categoria', categoryToSlug(nextCategory));
     }
-    setSearchParams(searchParams);
+    setSearchParams(params);
   };
 
   const handleCheckboxChange = (filterType, value) => {

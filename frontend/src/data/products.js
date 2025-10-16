@@ -3,6 +3,29 @@ import remeraUadeImg from "../assets/remerauade.jpg";
 import logouadeImg from "../assets/logouade.jpg";
 import tiendaExteriorImg from "../assets/exterioruade.jpg";
 
+export const CATEGORY_ALIASES = {
+  bestsellers: "Bestsellers",
+  "nuestros-basicos": "Nuestros Basicos",
+  accesorios: "Accesorios",
+  libreria: "Libreria",
+};
+
+export const resolveCategory = (value) => {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  return CATEGORY_ALIASES[normalized] ?? value;
+};
+
+export const categoryToSlug = (value) => {
+  if (!value) return "";
+  const lower = value.toLowerCase();
+  const match = Object.entries(CATEGORY_ALIASES).find(
+    ([, label]) => label.toLowerCase() === lower
+  );
+  if (match) return match[0];
+  return lower.replace(/\s+/g, "-");
+};
+
 const hoodieDetails = [
   "Material: Confección en frisa de algodón premium de 410 g.",
   "Corte unisex, fit relajado para un uso cómodo y urbano.",

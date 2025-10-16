@@ -10,8 +10,8 @@ export const getAllArticulos = async () => {
       *,
       Stock (
         *,
-        Color (*), Imagenes(*)
-      )
+        Color (*)
+      ), Imagenes(*)
     `);
 
   if (error) throw new Error(error.message); // Si hay un error, lo lanzamos

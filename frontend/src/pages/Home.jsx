@@ -8,6 +8,7 @@ import bolsaUADE from "../assets/BolsaUADE.png";
 import tiendaInteriorImg from "../assets/StorePorDentro.png";
 import tiendaExteriorImg from "../assets/StorePorFuera.png";
 import { Link } from "react-router-dom";
+import { categoryToSlug } from "../data/products";
 
 // Alias para categor�as
 const basicosImg = remeraUadeImg;
@@ -16,11 +17,11 @@ const accesoriosImg = termoUADE;
 const libreriaImg = libroUADE;
 
 const categories = [
-  { name: "Nuestros Basicos", image: basicosImg, slug: "nuestros-basicos" },
-  { name: "Bestsellers", image: bestsellersImg, slug: "bestsellers" },
-  { name: "Accesorios", image: accesoriosImg, slug: "accesorios" },
-  { name: "Libreria", image: libreriaImg, slug: "libreria" },
-];
+  { name: "Nuestros Basicos", image: basicosImg },
+  { name: "Bestsellers", image: bestsellersImg },
+  { name: "Accesorios", image: accesoriosImg },
+  { name: "Libreria", image: libreriaImg },
+].map((item) => ({ ...item, slug: categoryToSlug(item.name) }));
 
 const Home = () => {
   return (

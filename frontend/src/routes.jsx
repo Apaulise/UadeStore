@@ -5,6 +5,8 @@ import Catalog from "./pages/Catalog";
 import Admin from "./pages/Admin";
 import ProductDetail from "./pages/ProductDetail";
 import Checkout from "./pages/Checkout";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import OrderHistory from "./pages/OrderHistory";
 import { findProductById } from "./data/products";
 
 export const router = createBrowserRouter([
@@ -44,6 +46,20 @@ export const router = createBrowserRouter([
         element: <Checkout />,
         handle: {
           crumb: () => ({ label: "Checkout", to: "/checkout" }),
+        },
+      },
+      {
+        path: "checkout/exito",
+        element: <CheckoutSuccess />,
+        handle: {
+          crumb: () => ({ label: "Confirmación", to: "/checkout/exito" }),
+        },
+      },
+      {
+        path: "mis-compras",
+        element: <OrderHistory />,
+        handle: {
+          crumb: () => ({ label: "Mis Compras", to: "/mis-compras" }),
         },
       },
       {

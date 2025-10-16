@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
+import { usePendingOrder } from '../context/PendingOrderContext';
 
 const accentColor = '#1F3B67';
 const pickupDate = '01/07/2025';
@@ -14,7 +16,8 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { items, total } = useCart();
+  const { items, total, clear } = useCart();
+  const { setLastOrder } = usePendingOrder();
   const [email, setEmail] = useState('');
   const [notifyOffers, setNotifyOffers] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -53,14 +56,18 @@ const Checkout = () => {
       pickupDate,
       items: orderPreview,
       total,
+      createdAt: new Date().toISOString(),
     };
 
     // Esta estructura quedará lista para integrarse con el backend / cola de eventos.
     console.info('checkout:pending-submission', orderDraft);
 
     setTimeout(() => {
+      setLastOrder(orderDraft);
+      clear();
+      toast.success('Pago confirmado correctamente');
       setIsProcessing(false);
-      navigate('/catalogo');
+      navigate('/checkout/exito');
     }, 600);
   };
 

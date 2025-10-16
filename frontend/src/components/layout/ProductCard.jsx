@@ -23,7 +23,7 @@ const EditIcon = (props) => (
   </svg>
 );
 
-const ProductCard = ({ product, variant = 'catalog' }) => {
+const ProductCard = ({ product, variant = 'catalog', onEdit }) => {
   const { addItem } = useCart();
 
   if (!product) return null;
@@ -54,7 +54,15 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
       {variant === 'admin' && (
-        <button className="absolute right-2 top-2 z-10 rounded-full bg-white p-2 shadow-md transition hover:bg-gray-100">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onEdit?.(product);
+          }}
+          className="absolute right-2 top-2 z-10 rounded-full bg-white p-2 shadow-md transition hover:bg-gray-100"
+        >
           <EditIcon />
         </button>
       )}
@@ -92,10 +100,10 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
       </Link>
 
       {variant === 'catalog' && (
-        <div className="mt-4">
+        <div className="mt-4 flex justify-center">
           <button
             onClick={handleAdd}
-            className="w-full rounded-full bg-[#1E3763] py-2 font-semibold text-white transition duration-300 hover:bg-[linear-gradient(90deg,#1E3763_0%,rgba(255,255,255,0.85)_100%)] hover:text-[#1E3763]"
+            className="w-10/12 rounded-full border border-[#1E3763] bg-[#1E3763] py-2 font-semibold text-white transition duration-300 hover:bg-transparent hover:text-[#1E3763]"
           >
             Agregar al carrito
           </button>

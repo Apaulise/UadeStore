@@ -30,6 +30,42 @@ const Catalog = () => {
     setFilters((prev) => ({ ...prev, query: q, category: categoryFromURL }));
   }, [searchParams]);
 
+  const normalize = (value = '') =>
+    value
+      .normalize('NFD')
+      .replace(/\p{Diacritic}+/gu, '')
+      .toLowerCase();
+
+  const matchesQuery = (product, term) => {
+    const normalizedTerm = normalize(term.trim());
+    if (!normalizedTerm) return true;
+
+    const termParts = normalizedTerm.split(/\s+/).filter(Boolean);
+    if (termParts.length === 0) return true;
+
+    const searchableValues = [
+      product.name,
+      product.category,
+      product.color,
+      product.size,
+      product.id,
+      ...(product.tags || []),
+    ]
+      .filter(Boolean)
+      .map((value) => normalize(String(value)));
+
+    if (searchableValues.length === 0) return false;
+
+    const productWords = searchableValues
+      .join(' ')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return termParts.every((part) =>
+      productWords.some((word) => word.startsWith(part))
+    );
+  };
+
   // motor de filtrado
   useEffect(() => {
     let products = [...allProducts];
@@ -50,14 +86,7 @@ const Catalog = () => {
 
     // B�squeda por texto
     if (filters.query && filters.query.trim()) {
-      const term = filters.query.toLowerCase();
-      products = products.filter((p) => {
-        const fields = [p.name, p.category, p.color, p.size]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return fields.includes(term);
-      });
+      products = products.filter((p) => matchesQuery(p, filters.query));
     }
 
     setFilteredProducts(products);

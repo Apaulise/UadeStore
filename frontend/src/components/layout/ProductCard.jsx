@@ -23,26 +23,33 @@ const EditIcon = (props) => (
 );
 
 const ProductCard = ({ product, variant = 'catalog' }) => {
+  console.log("1. ¿Qué llega en la prop 'product'?", product);
   const { addItem } = useCart();
 
   if (!product) return null;
 
-  const currentColor = product.colorOptions?.find(
-    (option) =>
-      option.label.toLowerCase() === (product.color || '').toLowerCase()
-  );
+  const allColorObjects = product.Stock.map(stockid => stockid.Color);
+  console.log("2. ¿Qué se extrae en 'allColorObjects'?", allColorObjects);
 
-  const handleAdd = () => {
-    addItem({
-      id: product.id || product.name,
-      name: product.name,
-      price: product.price || 0,
-      image: product.image,
-      color: product.color,
-      size: product.size,
-      quantity: 1,
+    // 2. Creamos una lista de colores únicos usando un Map por el ID del color
+    const uniqueColorsMap = new Map();
+    allColorObjects.forEach(color => {
+      if (color) { // Asegurarnos que el color no es nulo
+        uniqueColorsMap.set(color.id, color);
+      }
     });
-  };
+    const uniqueColors = Array.from(uniqueColorsMap.values());
+    console.log("3. ¿Qué queda en 'uniqueColors'?", uniqueColors);
+    const handleAdd = () => {
+      addItem({
+        id: product.id,
+        name: product.Titulo,
+        price: product.precio || 0,
+        image: product.image,
+        quantity: 1,
+      });
+    };
+    const imageUrl = product.Imagen?.[0]?.url;
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
@@ -57,10 +64,10 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
         className="flex flex-1 flex-col items-center gap-3 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
       >
         <div className="flex h-48 w-full items-center justify-center overflow-hidden rounded-md bg-gray-200">
-          {product.image ? (
+          {imageUrl ? (
             <img
-              src={product.image}
-              alt={product.name}
+              src={imageUrl}
+              alt={product.Titulo}
               className="h-full w-full object-cover"
               loading="lazy"
             />
@@ -68,20 +75,23 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
         </div>
         <div className="flex flex-col items-center">
           <h3 className="text-lg font-semibold text-brand-text">
-            {product.name}
+            {product.Titulo}
           </h3>
           <p className="text-xl font-bold text-brand-text">
-            ${Number(product.price).toFixed(2)}
+            ${Number(product.precio).toFixed(2)}
           </p>
-          <div
-            className="h-4 w-4 rounded-full border border-black/10"
-            style={
-              currentColor
-                ? { backgroundColor: currentColor.hex }
-                : { backgroundColor: '#111111' }
-            }
-          />
-        </div>
+          <div className="flex items-center gap-x-2">
+              {uniqueColors.map((color) => (
+                <div
+                  key={color.id}
+                  className="h-4 w-4 rounded-full border border-black/10"
+                  // 👇 CAMBIO CLAVE: Agregamos el '#' al principio del color
+                  style={{ backgroundColor: `#${color.hexa}` }}
+                  title={color.nombre}
+                />
+              ))}
+            </div>
+          </div>
       </Link>
 
       {variant === 'catalog' && (

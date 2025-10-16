@@ -6,7 +6,13 @@ import { supabase } from './supabase.service.js'; // Importamos el cliente
 export const getAllArticulos = async () => {
   const { data, error } = await supabase
     .from('Articulo')
-    .select('*');
+    .select(`
+      *,
+      Stock (
+        *,
+        Color (*), Imagenes(*)
+      )
+    `);
 
   if (error) throw new Error(error.message); // Si hay un error, lo lanzamos
   return data;

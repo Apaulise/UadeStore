@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useCart } from '../../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const EditIcon = (props) => (
   <svg
@@ -24,8 +24,7 @@ const EditIcon = (props) => (
 
 const ProductCard = ({ product, variant = 'catalog' }) => {
   console.log("1. ¿Qué llega en la prop 'product'?", product);
-  const { addItem } = useCart();
-
+  const navigate = useNavigate(); // Get the navigate function
   if (!product) return null;
 
   const allColorObjects = product.Stock.map(stockid => stockid.Color);
@@ -40,16 +39,14 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
     });
     const uniqueColors = Array.from(uniqueColorsMap.values());
     console.log("3. ¿Qué queda en 'uniqueColors'?", uniqueColors);
-    const handleAdd = () => {
-      addItem({
-        id: product.id,
-        name: product.Titulo,
-        price: product.precio || 0,
-        image: product.image,
-        quantity: 1,
-      });
+    const handleClick = () => {
+      // Optional: Do something else here if needed
+      console.log('Navigating to product:', product.id);
+      
+      // Navigate to the desired URL
+      navigate(`/producto/${product.id}`); 
     };
-    const imageUrl = product.Imagen?.[0]?.url;
+    const imageUrl = product.Imagen[0]?.imagen;
 
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
@@ -97,7 +94,7 @@ const ProductCard = ({ product, variant = 'catalog' }) => {
       {variant === 'catalog' && (
         <div className="absolute bottom-0 left-0 w-full translate-y-full transform bg-gradient-to-t from-black/50 to-transparent p-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
           <button
-            onClick={handleAdd}
+            onClick={handleClick} // Call the function on click
             className="w-full rounded-lg bg-brand-blue py-2 font-semibold text-white transition hover:brightness-110"
           >
             Agregar al carrito

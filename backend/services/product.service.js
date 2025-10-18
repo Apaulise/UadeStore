@@ -21,7 +21,13 @@ export const getAllArticulos = async () => {
 export const getArticuloById = async (productId) => {
   const { data, error } = await supabase
     .from('Articulo') // 1. De la tabla 'products'
-    .select('*')      // 2. Traeme todas las columnas
+    .select(`
+      *,
+      Stock (
+        *,
+        Color (*)
+      ), Imagen(*)
+    `)      // 2. Traeme todas las columnas
     .eq('id', productId) // 3. DONDE la columna 'id' SEA IGUAL A productId
     .single();        // 4. Y como sé que es uno solo, devuélvemelo como objeto, no como array
 

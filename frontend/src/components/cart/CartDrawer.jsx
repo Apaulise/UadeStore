@@ -58,7 +58,7 @@ const CartDrawer = () => {
               <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-gray-200">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                ) : null}
+                ) : console.log("item", item) }
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">

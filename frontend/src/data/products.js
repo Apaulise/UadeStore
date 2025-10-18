@@ -35,7 +35,7 @@ const hoodieDetails = [
   "Cuidados: Pre-lavado especial para mantener su forma lavado tras lavado.",
 ];
 
-export const products = [
+export const products =[
   {
     id: "buzo-uade",
     name: "Buzo UADE",

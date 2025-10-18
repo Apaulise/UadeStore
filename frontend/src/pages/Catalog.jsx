@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/layout/ProductCard';
-import { useSearchParams } from 'react-router-dom';
-import { products as mockProducts, resolveCategory, categoryToSlug } from '../data/products';
+import { data, useSearchParams } from 'react-router-dom';
+import { ProductsAPI } from '../services/api';
+//import { products as mockProducts } from '../data/products';
+
+const categories = [
+  { name: "NUESTROS BASICOS",  slug: "nuestros-basicos" },
+  { name: "BESTSELLERS",  slug: "bestsellers" },
+  { name: "ACCESORIO",  slug: "accesorios" },
+  { name: "LIBRERIA",  slug: "libreria" },
+];
 
 const Catalog = () => {
   // --- ESTADOS ---
@@ -16,30 +24,48 @@ const Catalog = () => {
     query: '',
   });
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); 
+  
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // carga inicial de datos (reemplazar con fetch real)
-  useEffect(() => {
-    setAllProducts(mockProducts);
-  }, []);
 
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // Llamada correcta a la función y se espera la data
+        const data = await ProductsAPI.list(); 
+        // La respuesta de la API se guarda directamente en allProducts
+        setAllProducts(data); 
+        if (data && data.length > 0) {
+        const maxInitialPrice = Math.max(...data.map(p => p.precio));
+        setFilters(prev => ({ ...prev, maxPrice: maxInitialPrice }));
+      }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+    
+  }, []);
   // sincroniza filtros con la URL (q y categoria)
   useEffect(() => {
     const q = searchParams.get('q') || '';
-    const categoryFromURL = searchParams.get('categoria');
-    const normalizedCategory = resolveCategory(categoryFromURL);
+    const categorySlugFromURL = searchParams.get('categoria');
 
-    // Reseteamos colores/talles cuando la categoría cambia desde la URL
-    setFilters((prev) => {
-      const hasCategoryChanged = prev.category !== normalizedCategory;
-      return {
-        ...prev,
-        query: q,
-        category: normalizedCategory,
-        colors: hasCategoryChanged ? [] : prev.colors,
-        sizes: hasCategoryChanged ? [] : prev.sizes,
-      };
-    });
+    // Buscamos el objeto de categoría que coincide con el slug
+    const foundCategory = categories.find(cat => cat.slug === categorySlugFromURL);
+
+    // Actualizamos el filtro con el NOMBRE COMPLETO de la categoría, o null si no se encuentra
+    setFilters((prev) => ({ 
+      ...prev, 
+      query: q, 
+      category: foundCategory ? foundCategory.name : null 
+    }));
   }, [searchParams]);
 
   const normalize = (value = '') =>
@@ -81,38 +107,63 @@ const Catalog = () => {
   // motor de filtrado
   useEffect(() => {
     let products = [...allProducts];
-
+    console.log("productos motor", products)
     if (filters.category) {
-      products = products.filter((p) => p.category === filters.category);
+      products = products.filter((p) => 
+        p.categoria.toLowerCase() === filters.category.toLowerCase()
+      );
     }
     if (filters.sizes.length > 0) {
-      products = products.filter((p) => p.size && filters.sizes.includes(p.size));
-    }
-    if (filters.colors.length > 0) {
-      products = products.filter((p) => p.color && filters.colors.includes(p.color));
-    }
-    if (filters.inStockOnly) {
-      products = products.filter((p) => p.inStock);
-    }
-    products = products.filter((p) => p.price <= filters.maxPrice);
+    products = products.filter((p) =>
+      p.Stock.some(stockItem => filters.sizes.includes(stockItem.talle))
+    );
+  }
 
-    // B�squeda por texto
-    if (filters.query && filters.query.trim()) {
-      products = products.filter((p) => matchesQuery(p, filters.query));
-    }
+  if (filters.colors.length > 0) {
+    products = products.filter((p) =>
+      p.Stock.some(stockItem => filters.colors.includes(stockItem.Color.nombre))
+    );
+  }
 
-    setFilteredProducts(products);
-  }, [filters, allProducts]);
+  if (filters.inStockOnly) {
+    products = products.filter((p) =>
+      // CAMBIO: Usamos la propiedad 'stock' en lugar de 'cantidad'
+      p.Stock.some(stockItem => stockItem.stock > 0)
+    );
+  }
 
-  // opciones din�micas
+  products = products.filter((p) => p.precio <= filters.maxPrice);
+
+  // Búsqueda por texto
+  if (filters.query && filters.query.trim()) {
+    const term = filters.query.toLowerCase();
+    products = products.filter((p) => {
+      // CAMBIO: Usamos 'Titulo' en lugar de 'name' y 'categoria'
+      const fields = [p.Titulo, p.categoria]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return fields.includes(term);
+    });
+  }
+  
+  console.log("desp filtrado", products);
+  setFilteredProducts(products);
+}, [filters, allProducts]);
+
+  // opciones dinámicas
   const availableOptions = useMemo(() => {
     const relevantProducts = filters.category
       ? allProducts.filter((p) => p.category === filters.category)
       : allProducts;
 
-    const sizes = new Set(relevantProducts.map((p) => p.size).filter(Boolean));
-    const colors = new Set(relevantProducts.map((p) => p.color).filter(Boolean));
-    const categories = new Set(allProducts.map((p) => p.category));
+    const sizes = new Set(
+      relevantProducts.flatMap(p => p.Stock.map(stockItem => stockItem.talle))
+    );
+    const colors = new Set(
+      relevantProducts.flatMap(p => p.Stock.map(stockItem => stockItem.Color.nombre))
+    );
+    const categories = new Set(allProducts.map((p) => p.categoria));
 
     return {
       sizes: Array.from(sizes).sort(),
@@ -122,18 +173,24 @@ const Catalog = () => {
   }, [allProducts, filters.category]);
 
   // manejadores
-  const handleCategoryChange = (category) => {
-    const nextCategory = filters.category === category ? null : category;
-    setFilters((prev) => ({ ...prev, category: nextCategory }));
+  const handleCategoryChange = (categoryName) => {
+  // --- SOLUCIÓN AL PROBLEMA #2 ---
+  const isActive = filters.category?.toLowerCase() === categoryName.toLowerCase();
+  const newCategoryName = isActive ? null : categoryName;
 
-    const params = new URLSearchParams(searchParams);
-    if (!nextCategory) {
-      params.delete('categoria');
-    } else {
-      params.set('categoria', categoryToSlug(nextCategory));
+  setFilters((prev) => ({ ...prev, category: newCategoryName }));
+
+  if (newCategoryName) {
+    // Buscamos el slug que corresponde al nombre de la categoría
+    const foundCategory = categories.find(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase());
+    if (foundCategory) {
+      searchParams.set('categoria', foundCategory.slug);
     }
-    setSearchParams(params);
-  };
+  } else {
+    searchParams.delete('categoria');
+  }
+  setSearchParams(searchParams);
+};
 
   const handleCheckboxChange = (filterType, value) => {
     setFilters((prev) => {
@@ -157,6 +214,9 @@ const Catalog = () => {
     setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: 100, query: '' });
     setSearchParams({});
   };
+
+  if (loading) return <div className="text-center py-16">Cargando productos...</div>;
+  if (error) return <div className="text-center py-16 text-red-500">Error: {error}</div>;
 
   // vista
   return (
@@ -243,13 +303,16 @@ const Catalog = () => {
 
         {/* --- Columna de Productos (Derecha) --- */}
         <main className="flex-1">
+        
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => (
+                console.log("llegue aca2"),
                 <ProductCard key={product.id} product={product} variant={"catalog"} />
               ))}
             </div>
           ) : (
+            console.log("llegue aca"),
             <div className="text-center py-16">
               <h3 className="text-xl font-semibold">No se encontraron productos</h3>
               <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver mas resultados.</p>

@@ -38,7 +38,7 @@ export const CartProvider = ({ children }) => {
     // Merge by id+size+color to avoid duplicates
     setItems((prev) => {
       const idx = prev.findIndex(
-        (i) => i.id === item.id && i.size === item.size && i.color === item.color
+        (i) => i.id === item.id && i.size === item.size && i.color === item.color && i.image === item.image
       );
       if (idx !== -1) {
         const next = [...prev];
@@ -57,7 +57,7 @@ export const CartProvider = ({ children }) => {
   const increment = (id, { size, color } = {}) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id && i.size === size && i.color === color
+        i.id === id && i.size === size && i.color === color && i.image === i.image
           ? { ...i, quantity: (i.quantity || 1) + 1 }
           : i
       )

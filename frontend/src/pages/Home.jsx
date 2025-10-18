@@ -17,11 +17,11 @@ const accesoriosImg = termoUADE;
 const libreriaImg = libroUADE;
 
 const categories = [
-  { name: "Nuestros Basicos", image: basicosImg },
-  { name: "Bestsellers", image: bestsellersImg },
-  { name: "Accesorios", image: accesoriosImg },
-  { name: "Libreria", image: libreriaImg },
-].map((item) => ({ ...item, slug: categoryToSlug(item.name) }));
+  { name: "NUESTROS BASICOS", image: basicosImg, slug: "nuestros-basicos" },
+  { name: "BESTSELLERS", image: bestsellersImg, slug: "bestsellers" },
+  { name: "ACCESORIO", image: accesoriosImg, slug: "accesorios" },
+  { name: "LIBRERIA", image: libreriaImg, slug: "libreria" },
+];
 
 const Home = () => {
   return (

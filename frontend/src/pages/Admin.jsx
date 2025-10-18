@@ -1,20 +1,170 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/layout/ProductCard';
+import ProductEditModal from '../components/admin/ProductEditModal';
 
 // --- DATOS DE MUESTRA (Reemplazar con tu llamada a la API) ---
 const mockProducts = [
-  { id: 1, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: true, size: 'M', color: 'Gris' },
-  { id: 2, name: 'Remera UADE', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'S', color: 'Blanco' },
-  { id: 3, name: 'Cuaderno Rayado', category: 'Librería', price: 12, inStock: true, size: null, color: 'Negro' },
-  { id: 4, name: 'Botella Térmica', category: 'Accesorios', price: 25, inStock: false, size: null, color: 'Plata' },
-  { id: 5, name: 'Remera UADE Negra', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'L', color: 'Negro' },
-  { id: 6, name: 'Buzo UADE Azul', category: 'Bestsellers', price: 54, inStock: true, size: 'L', color: 'Azul' },
-  { id: 7, name: 'Gorra UADE', category: 'Accesorios', price: 18, inStock: true, size: null, color: 'Negro' },
-  { id: 8, name: 'Remera UADE Roja', category: 'Nuestros Básicos', price: 39, inStock: true, size: 'M', color: 'Rojo' },
-  { id: 9, name: 'Taza UADE', category: 'Accesorios', price: 15, inStock: true, size: null, color: 'Blanco' },
-  { id: 10, name: 'Buzo UADE', category: 'Bestsellers', price: 54, inStock: false, size: 'S', color: 'Gris' },
+  {
+    id: 1,
+    name: 'Buzo UADE',
+    category: 'Bestsellers',
+    price: 54,
+    inStock: true,
+    size: 'M',
+    color: 'Gris',
+    stock: 26,
+    sku: 'UADE-BZ-001',
+    description: 'Buzo de frisa premium con logo bordado UADE. Ideal para acompanarte en el campus o las reuniones informales.',
+    stockItems: [
+      { colorName: 'Azul', colorHex: '#1E3763', size: 'M', quantity: 12 },
+      { colorName: 'Gris', colorHex: '#6C757D', size: 'L', quantity: 14 },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Remera UADE',
+    category: 'Nuestros Basicos',
+    price: 39,
+    inStock: true,
+    size: 'S',
+    color: 'Blanco',
+    stock: 44,
+    sku: 'UADE-RM-101',
+    description: 'Remera de algodon peinado, corte unisex y confortable. El logo frontal celebra el espiritu UADE.',
+    stockItems: [
+      { colorName: 'Blanco', colorHex: '#FFFFFF', size: 'S', quantity: 20 },
+      { colorName: 'Azul', colorHex: '#1E3763', size: 'M', quantity: 24 },
+    ],
+  },
+  {
+    id: 3,
+    name: 'Cuaderno Rayado',
+    category: 'Libreria',
+    price: 12,
+    inStock: true,
+    size: null,
+    color: 'Negro',
+    stock: 78,
+    sku: 'UADE-CU-305',
+    description: 'Encuadernado cosido 17x24cm con 120 hojas rayadas y papel reforzado de 80gr. Listo para tus apuntes.',
+    stockItems: [
+      { colorName: 'Negro', colorHex: '#1F1F1F', size: 'Único', quantity: 40 },
+      { colorName: 'Azul', colorHex: '#1C7ED6', size: 'Único', quantity: 38 },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Botella Termica',
+    category: 'Accesorios',
+    price: 25,
+    inStock: false,
+    size: null,
+    color: 'Plata',
+    stock: 0,
+    sku: 'UADE-BO-210',
+    description: 'Botella doble capa de acero inoxidable, mantiene tu bebida fria o caliente hasta por 12 horas.',
+    stockItems: [
+      { colorName: 'Plata', colorHex: '#ADB5BD', size: '500ml', quantity: 0 },
+    ],
+  },
+  {
+    id: 5,
+    name: 'Remera UADE Negra',
+    category: 'Nuestros Basicos',
+    price: 39,
+    inStock: true,
+    size: 'L',
+    color: 'Negro',
+    stock: 33,
+    sku: 'UADE-RM-205',
+    description: 'Remera UADE color negro con serigrafia blanca. Perfecta para combinar con tu outfit urbano.',
+    stockItems: [
+      { colorName: 'Negro', colorHex: '#111111', size: 'M', quantity: 12 },
+      { colorName: 'Negro', colorHex: '#111111', size: 'L', quantity: 21 },
+    ],
+  },
+  {
+    id: 6,
+    name: 'Buzo UADE Azul',
+    category: 'Bestsellers',
+    price: 54,
+    inStock: true,
+    size: 'L',
+    color: 'Azul',
+    stock: 18,
+    sku: 'UADE-BZ-112',
+    description: 'Buzo frisa color azul con detalles bordados en blanco. Capucha forrada y bolsillos frontales.',
+    stockItems: [
+      { colorName: 'Azul', colorHex: '#1E3763', size: 'L', quantity: 10 },
+      { colorName: 'Azul', colorHex: '#1E3763', size: 'M', quantity: 8 },
+    ],
+  },
+  {
+    id: 7,
+    name: 'Gorra UADE',
+    category: 'Accesorios',
+    price: 18,
+    inStock: true,
+    size: null,
+    color: 'Negro',
+    stock: 52,
+    sku: 'UADE-GR-001',
+    description: 'Gorra snapback con visera curva y ajuste trasero. Logo bordado para los hinchas de la universidad.',
+    stockItems: [
+      { colorName: 'Negro', colorHex: '#111111', size: 'Único', quantity: 30 },
+      { colorName: 'Azul', colorHex: '#1E3763', size: 'Único', quantity: 22 },
+    ],
+  },
+  {
+    id: 8,
+    name: 'Remera UADE Roja',
+    category: 'Nuestros Basicos',
+    price: 39,
+    inStock: true,
+    size: 'M',
+    color: 'Rojo',
+    stock: 29,
+    sku: 'UADE-RM-307',
+    description: 'Remera de algodon rojo carmesi. Ideal para destacar en los eventos del campus.',
+    stockItems: [
+      { colorName: 'Rojo', colorHex: '#E03131', size: 'S', quantity: 10 },
+      { colorName: 'Rojo', colorHex: '#E03131', size: 'M', quantity: 19 },
+    ],
+  },
+  {
+    id: 9,
+    name: 'Taza UADE',
+    category: 'Accesorios',
+    price: 15,
+    inStock: true,
+    size: null,
+    color: 'Blanco',
+    stock: 65,
+    sku: 'UADE-TZ-010',
+    description: 'Taza ceramica esmaltada de 350ml. Perfecta para tus desayunos antes de clase.',
+    stockItems: [
+      { colorName: 'Blanco', colorHex: '#FFFFFF', size: '350ml', quantity: 35 },
+      { colorName: 'Azul', colorHex: '#1E3763', size: '350ml', quantity: 30 },
+    ],
+  },
+  {
+    id: 10,
+    name: 'Buzo UADE',
+    category: 'Bestsellers',
+    price: 54,
+    inStock: false,
+    size: 'S',
+    color: 'Gris',
+    stock: 0,
+    sku: 'UADE-BZ-220',
+    description: 'Version gris jaspeado del clasico buzo UADE. Actualmente sin stock.',
+    stockItems: [
+      { colorName: 'Gris', colorHex: '#6C757D', size: 'S', quantity: 0 },
+    ],
+  },
 ];
+
 
 // --- PÁGINA PRINCIPAL DEL CATÁLOGO ---
 
@@ -29,8 +179,43 @@ const Admin = () => {
     inStockOnly: false,
     maxPrice: 100,
   });
+  const [editingProduct, setEditingProduct] = useState(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const openEditor = (product) => {
+    if (!product) return;
+    setEditingProduct({
+      ...product,
+      description: product.description ?? '',
+      stock: product.stock ?? 0,
+      sku: product.sku ?? '',
+      price: product.price ?? 0,
+    });
+  };
+
+  const closeEditor = () => setEditingProduct(null);
+
+  const handleSaveProduct = (updatedProduct) => {
+    setAllProducts((prev) =>
+      prev.map((item) =>
+        item.id === updatedProduct.id
+          ? {
+              ...item,
+              ...updatedProduct,
+              price: Number(updatedProduct.price) || 0,
+              stock: Number(updatedProduct.stock) || 0,
+              inStock: Boolean(updatedProduct.inStock),
+            }
+          : item
+      )
+    );
+    setEditingProduct(null);
+  };
+
+  const handleDeleteProduct = (productToDelete) => {
+    setAllProducts((prev) => prev.filter((item) => item.id !== productToDelete.id));
+    setEditingProduct(null);
+  };
 
   // --- EFECTOS (LÓGICA) ---
 
@@ -134,7 +319,8 @@ const Admin = () => {
   // --- RENDERIZADO (VISTA) ---
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Administración</h1>
       <p className="text-gray-600 mb-8">
         Mostrando {filteredProducts.length} de {allProducts.length} productos.
@@ -217,7 +403,7 @@ const Admin = () => {
           {filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} variant={"admin"} />
+                <ProductCard key={product.id} product={product} variant={"admin"} onEdit={openEditor} />
               ))}
             </div>
           ) : (
@@ -228,7 +414,14 @@ const Admin = () => {
           )}
         </main>
       </div>
-    </div>
+      </div>
+      <ProductEditModal
+        product={editingProduct}
+        onClose={closeEditor}
+        onSave={handleSaveProduct}
+        onDelete={handleDeleteProduct}
+      />
+    </>
   );
 }
 

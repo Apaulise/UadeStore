@@ -16,7 +16,7 @@ const TrashIcon = (props) => (
 
 const CartDrawer = () => {
   const navigate = useNavigate();
-  const { items, isOpen, close, removeItem, increment, decrement, total } = useCart();
+  const { items, isOpen, close, removeItem, increment, decrement, total, clear } = useCart();
 
   const handleCheckout = () => {
     if (items.length === 0) return;

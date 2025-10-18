@@ -161,7 +161,12 @@ const Header = () => {
                 )}
               </div>
             </button>
-            <span className="text-sm font-semibold">Camila</span>
+            <Link
+              to="/mis-compras"
+              className="text-sm font-semibold transition hover:text-brand-blue"
+            >
+              Camila
+            </Link>
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
@@ -183,7 +188,12 @@ const Header = () => {
             >
               <BagIcon className="h-5 w-5" />
             </button>
-            <span className="text-sm font-semibold">Camila</span>
+            <Link
+              to="/mis-compras"
+              className="text-sm font-semibold transition hover:text-brand-blue"
+            >
+              Camila
+            </Link>
             <button
               type="button"
               onClick={toggleNav}

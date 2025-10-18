@@ -8,6 +8,7 @@ import bolsaUADE from "../assets/BolsaUADE.png";
 import tiendaInteriorImg from "../assets/StorePorDentro.png";
 import tiendaExteriorImg from "../assets/StorePorFuera.png";
 import { Link } from "react-router-dom";
+import { categoryToSlug } from "../data/products";
 
 // Alias para categor�as
 const basicosImg = remeraUadeImg;

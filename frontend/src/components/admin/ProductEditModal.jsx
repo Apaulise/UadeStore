@@ -1,163 +1,208 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { FaTrash, FaPlus } from "react-icons/fa";
+import ColorPickerModal from "./ColorPickerModal";
 
 const tabs = [
   { id: "details", label: "Detalles" },
   { id: "stock", label: "Stock" },
 ];
 
-const generateId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2, 9);
-
+/** Paleta base con nombres canónicos */
 const COLOR_OPTIONS = [
-  { label: "Azul", hex: "#1E3763" },
-  { label: "Rojo", hex: "#E03131" },
-  { label: "Verde", hex: "#2F9E44" },
+  { label: "Azul",     hex: "#1E3763" },
+  { label: "Rojo",     hex: "#E03131" },
+  { label: "Verde",    hex: "#2F9E44" },
   { label: "Amarillo", hex: "#F59F00" },
-  { label: "Marron", hex: "#795548" },
-  { label: "Celeste", hex: "#1C7ED6" },
-  { label: "Negro", hex: "#111111" },
-  { label: "Blanco", hex: "#F8F9FA" },
+  { label: "Marrón",   hex: "#795548" },
+  { label: "Celeste",  hex: "#1C7ED6" },
+  { label: "Negro",    hex: "#111111" },
+  { label: "Blanco",   hex: "#F8F9FA" },
+  { label: "Violeta",  hex: "#7C3AED" },
+  { label: "Naranja",  hex: "#F97316" },
+  { label: "Gris",     hex: "#6B7280" },
 ];
 
-const createEmptyStockEntry = () => ({
-  id: generateId(),
-  colorName: "",
-  colorHex: "#1E3763",
-  size: "",
-  quantity: "",
-});
-
-const mapInitialStockItems = (product) => {
-  if (!product) return [createEmptyStockEntry()];
-  const items = product.stockItems ?? [];
-  if (!items.length) return [createEmptyStockEntry()];
-  return items.map((item) => ({
-    id: generateId(),
-    colorName: item.colorName ?? item.color ?? "",
-    colorHex: item.colorHex ?? item.hex ?? "#1E3763",
-    size: item.size ?? "",
-    quantity:
-      item.quantity !== undefined && item.quantity !== null
-        ? String(item.quantity)
-        : String(item.stock ?? ""),
-  }));
+/** Sinónimos (normalizados) → nombre canónico */
+const COLOR_SYNONYMS = {
+  "marron": "Marrón",
+  "marrón": "Marrón",
+  "castaño": "Marrón",
+  "azul claro": "Celeste",
+  "celeste": "Celeste",
+  "purpura": "Violeta",
+  "púrpura": "Violeta",
+  "violeta": "Violeta",
+  "morado": "Violeta",
+  "naranjado": "Naranja",
+  "gris": "Gris",
+  "plata": "Gris",
+  "blanco": "Blanco",
+  "negro": "Negro",
+  "azul": "Azul",
+  "rojo": "Rojo",
+  "verde": "Verde",
+  "amarillo": "Amarillo",
+  "naranja": "Naranja",
 };
 
-const ProductEditModal = ({ product, onClose, onSave, onDelete }) => {
+/* ================= Helpers ================= */
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
+const hexToRgb = (hex) => {
+  const c = (hex || "#000").replace("#", "").trim();
+  const m = c.length === 3 ? c.split("").map(ch => ch + ch).join("") : c.slice(0, 6).padEnd(6, "0");
+  return { r: parseInt(m.slice(0, 2), 16), g: parseInt(m.slice(2, 4), 16), b: parseInt(m.slice(4, 6), 16) };
+};
+const rgbDist2 = (h1, h2) => {
+  const a = hexToRgb(h1), b = hexToRgb(h2);
+  const dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
+  return dr * dr + dg * dg + db * db;
+};
+const normalize = (s = "") =>
+  s.toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const NAME_TO_HEX = (() => {
+  const map = new Map();
+  for (const { label, hex } of COLOR_OPTIONS) map.set(normalize(label), hex);
+  for (const [syn, canonical] of Object.entries(COLOR_SYNONYMS)) {
+    const hex = COLOR_OPTIONS.find(c => c.label === canonical)?.hex;
+    if (hex) map.set(normalize(syn), hex);
+  }
+  return map;
+})();
+
+const HEX_TO_NAME = (() => {
+  const map = new Map();
+  for (const { label, hex } of COLOR_OPTIONS) map.set(hex.toLowerCase(), label);
+  return map;
+})();
+
+/** Encuentra el nombre más cercano para un hex */
+const nearestNameForHex = (hex) => {
+  const exact = HEX_TO_NAME.get((hex || "").toLowerCase());
+  if (exact) return exact;
+  let best = COLOR_OPTIONS[0], bestD = Infinity;
+  for (const opt of COLOR_OPTIONS) {
+    const d = rgbDist2(hex, opt.hex);
+    if (d < bestD) { bestD = d; best = opt; }
+  }
+  return best.label;
+};
+
+/** Devuelve el hex para un nombre (exacto/sinónimo/prefijo único). */
+const hexForNameFlexible = (name) => {
+  const key = normalize(name);
+  if (!key) return null;
+
+  // 1) Exacto o sinónimo
+  if (NAME_TO_HEX.has(key)) return NAME_TO_HEX.get(key);
+
+  // 2) Prefijo único entre nombres canónicos + sinónimos
+  const candidates = [];
+  for (const [n, h] of NAME_TO_HEX.entries()) {
+    if (n.startsWith(key)) candidates.push({ n, h });
+  }
+  if (candidates.length === 1) return candidates[0].h;
+  return null;
+};
+
+/** Nombre canónico para un hex (si exacto) */
+const canonicalNameForHex = (hex) => HEX_TO_NAME.get((hex || "").toLowerCase()) || null;
+/* =============== /Helpers ================== */
+
+export default function ProductEditModal({ product, onClose, onSave, onDelete }) {
   const [activeTab, setActiveTab] = useState("details");
   const [form, setForm] = useState(() => (product ? { ...product } : null));
-  const [stockItems, setStockItems] = useState(() => mapInitialStockItems(product));
+
+  // ✅ SIN FILAS PREDETERMINADAS
+  const [stockItems, setStockItems] = useState(() => product?.stockItems ?? []);
+
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
-  const addRowRef = useRef(null);
-  const usedColorLabels = useMemo(
-    () =>
-      new Set(
-        stockItems
-          .map((item) => (item.colorName ?? "").toLowerCase().trim())
-          .filter(Boolean)
-      ),
-    [stockItems]
-  );
+  const [colorModalRowId, setColorModalRowId] = useState(null);
 
   useEffect(() => {
-    setForm(product ? { ...product } : null);
-    setStockItems(mapInitialStockItems(product));
-    setColorMenuOpen(false);
+    if (!product) return;
+    setForm({ ...product });
+    // ✅ si no trae stockItems, queda []
+    setStockItems(product.stockItems ?? []);
     setActiveTab("details");
+    setColorMenuOpen(false);
+    setColorModalRowId(null);
   }, [product]);
 
-  useEffect(() => {
-    if (!colorMenuOpen) return;
-    const handler = (event) => {
-      if (!addRowRef.current || addRowRef.current.contains(event.target)) return;
-      setColorMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [colorMenuOpen]);
+  if (!product || !form) return null;
 
-  const isOpen = useMemo(() => Boolean(product), [product]);
+  const handleChange = (field, value) => setForm((p) => ({ ...p, [field]: value }));
 
-  if (!isOpen || !form) return null;
+  const patchRow = (id, patch) => {
+    setStockItems(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
+  };
 
-  const handleChange = (field, value) => {
-    setForm((prev) => ({
+  /** HEX → NOMBRE (modal de colores) */
+  const applyHexToRow = (id, hex) => {
+    const canonical = canonicalNameForHex(hex) || nearestNameForHex(hex);
+    patchRow(id, { hex, color: canonical });
+  };
+
+  /** NOMBRE → HEX (input de texto) */
+  const applyNameToRow = (id, rawName) => {
+    const matchHex = hexForNameFlexible(rawName);
+    if (matchHex) {
+      const canonical = canonicalNameForHex(matchHex) || nearestNameForHex(matchHex);
+      patchRow(id, { color: canonical, hex: matchHex });
+    } else {
+      patchRow(id, { color: rawName });
+    }
+  };
+
+  const addStockRow = (opt) => {
+    setStockItems(prev => [
       ...prev,
-      [field]: value,
-    }));
+      { id: generateId(), color: opt.label, hex: opt.hex, size: "", stock: "" },
+    ]);
+    setColorMenuOpen(false);
   };
 
-  const handleStockItemChange = (rowId, field, value) => {
-    setStockItems((prev) =>
-      prev.map((entry) => {
-        if (entry.id !== rowId) return entry;
-        if (field === "colorHex") {
-          const match = COLOR_OPTIONS.find(
-            (option) => option.hex.toLowerCase() === value.toLowerCase()
-          );
-          return {
-            ...entry,
-            colorHex: value,
-            colorName: match ? match.label : entry.colorName,
-          };
-        }
-        return { ...entry, [field]: value };
-      })
-    );
+  const removeStockRow = (id) => {
+    setStockItems(prev => prev.filter(it => it.id !== id));
+    if (colorModalRowId === id) setColorModalRowId(null);
   };
 
-  const addStockRow = (colorOption) => {
-    const base = createEmptyStockEntry();
-    const entry = colorOption
-      ? { ...base, colorName: colorOption.label, colorHex: colorOption.hex }
-      : base;
-    setStockItems((prev) => [...prev, entry]);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const stock = stockItems.reduce((a, it) => a + (Number(it.stock) || 0), 0);
+    onSave?.({ ...form, stockItems, stock });
   };
 
-  const removeStockRow = (rowId) => {
-    setStockItems((prev) => (prev.length === 1 ? prev : prev.filter((entry) => entry.id !== rowId)));
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const normalizedStock = stockItems.map(({ id, colorName, colorHex, size, quantity }) => ({
-      colorName,
-      color: colorName,
-      colorHex,
-      size,
-      quantity: quantity === "" ? 0 : Number(quantity),
-    }));
-    const totalQuantity = normalizedStock.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
-    onSave?.({
-      ...form,
-      stock: totalQuantity,
-      stockItems: normalizedStock,
-    });
-  };
-
-  const handleDeleteClick = () => {
-    onDelete?.(form);
-  };
+  const ColorCircleButton = ({ hex, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`h-6 w-6 rounded-full border transition-transform hover:scale-110 focus:scale-110 focus:outline-none 
+                  ${hex?.toLowerCase() === "#f8f9fa" ? "ring-1 ring-gray-300" : "ring-1 ring-black/10"}`}
+      style={{ backgroundColor: hex || "#1E3763" }}
+      title="Elegir color"
+      aria-label="Elegir color"
+    />
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+        {/* Header + Tabs */}
         <div className="flex justify-between border-b px-6 pb-3 pt-5">
           <div className="flex gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setColorMenuOpen(false);
-                }}
+                onClick={() => { setActiveTab(tab.id); setColorMenuOpen(false); setColorModalRowId(null); }}
                 className={`rounded-lg px-3 py-1 text-sm font-semibold transition ${
-                  activeTab === tab.id
-                    ? "bg-[#1E3763] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  activeTab === tab.id ? "bg-[#1E3763] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
                 {tab.label}
@@ -171,223 +216,181 @@ const ProductEditModal = ({ product, onClose, onSave, onDelete }) => {
             aria-label="Cerrar"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M6 6l8 8M6 14l8-8"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-              />
+              <path d="M6 6l8 8M6 14l8-8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
             </svg>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6 pt-4">
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {activeTab === "details" ? (
             <>
               <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Nombre
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Nombre</label>
                 <input
                   type="text"
                   value={form.name ?? ""}
-                  onChange={(event) => handleChange("name", event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Precio
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Precio</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.price ?? 0}
-                  onChange={(event) => handleChange("price", event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
+                  type="number" step="0.01" min="0"
+                  value={form.price ?? ""}
+                  onChange={(e) => handleChange("price", e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Descripción
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Descripción</label>
                 <textarea
-                  value={form.description ?? ""}
-                  onChange={(event) =>
-                    handleChange("description", event.target.value)
-                  }
                   rows={5}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
+                  value={form.description ?? ""}
+                  onChange={(e) => handleChange("description", e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
                 />
               </div>
             </>
           ) : (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="grid grid-cols-[auto,1fr,1fr,1fr] items-center gap-3 text-sm font-semibold text-gray-600">
-                  <span />
-                  <span>Color</span>
-                  <span>Talle</span>
-                  <span>Stock Disp.</span>
-                </div>
-                <div className="mt-3 space-y-3">
-                  {stockItems.map((entry) => (
-                    <div key={entry.id} className="grid grid-cols-[auto,1fr,1fr,1fr] items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => removeStockRow(entry.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-100"
-                        aria-label="Eliminar variante"
-                      >
-                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
-                          <path d="M5 5l10 10M5 15L15 5" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                        </svg>
-                      </button>
-                      <div className="flex items-center gap-2">
-                        <label className="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm">
-                          <input
-                            type="color"
-                            value={entry.colorHex || "#1E3763"}
-                            onChange={(event) =>
-                              handleStockItemChange(entry.id, "colorHex", event.target.value)
-                            }
-                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                          />
-                          <span
-                            className="h-4 w-4 rounded-full border border-gray-200"
-                            style={{ backgroundColor: entry.colorHex || "#1E3763" }}
-                          />
-                        </label>
-                        <input
-                          type="text"
-                          value={entry.colorName}
-                          onChange={(event) =>
-                            handleStockItemChange(entry.id, "colorName", event.target.value)
-                          }
-                          placeholder="Color"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        value={entry.size}
-                        onChange={(event) => handleStockItemChange(entry.id, "size", event.target.value)}
-                        placeholder="Talle"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
-                      />
-                      <input
-                        type="number"
-                        min="0"
-                        value={entry.quantity}
-                        onChange={(event) =>
-                          handleStockItemChange(entry.id, "quantity", event.target.value)
-                        }
-                        placeholder="Cantidad"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
-                      />
-                    </div>
-                  ))}
-                  <div
-                    ref={addRowRef}
-                    className="grid grid-cols-[auto,1fr,1fr,1fr] items-center gap-3 pt-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setColorMenuOpen((prev) => !prev)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#1E3763] text-[#1E3763] transition hover:bg-[#1E3763]/10"
-                      aria-label="Agregar variante"
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none">
-                        <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                      </svg>
-                    </button>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setColorMenuOpen((prev) => !prev)}
-                        className="flex w-full items-center justify-between rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-[#1E3763]/10"
-                      >
-                        Agregar
-                        <svg className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="none">
-                          <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                        </svg>
-                      </button>
-                      {colorMenuOpen && (
-                        <div className="absolute left-0 top-full z-20 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                          {COLOR_OPTIONS.map((option) => {
-                            const isUsed = usedColorLabels.has(option.label.toLowerCase());
-                            return (
-                              <button
-                                key={option.label}
-                                type="button"
-                                onClick={() => {
-                                  addStockRow(option);
-                                  setColorMenuOpen(false);
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 transition hover:bg-[#1E3763]/10"
-                              >
-                                <span
-                                  className="h-3.5 w-3.5 rounded-full border border-gray-200"
-                                  style={{ backgroundColor: option.hex }}
-                                />
-                                <span className="flex-1 text-left">{option.label}</span>
-                                {isUsed && (
-                                  <svg className="h-3.5 w-3.5 text-[#1E3763]" viewBox="0 0 20 20" fill="none">
-                                    <path
-                                      d="M5 10l3 3 7-7"
-                                      stroke="currentColor"
-                                      strokeWidth={1.5}
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">
-                      Agregar
-                    </div>
-                    <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">
-                      Agregar
-                    </div>
-                  </div>
-                </div>
+            // === TAB STOCK ===
+            <div className="space-y-3">
+              <div
+                className="grid items-center gap-3 text-sm font-semibold text-gray-600"
+                style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
+              >
+                <span />
+                <span>Color</span>
+                <span>Talle</span>
+                <span>Stock Disp.</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">SKU</label>
+
+              {stockItems.length === 0 && (
+                <div className="rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-500">
+                  No hay variantes aún. Usá <span className="font-semibold">“Agregar”</span> para crear la primera.
+                </div>
+              )}
+
+              {stockItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="grid items-center gap-3"
+                  style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => removeStockRow(item.id)}
+                    className="flex items-center justify-center h-8 w-8 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-500"
+                    aria-label="Eliminar variante"
+                  >
+                    <FaTrash size={13} />
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <ColorCircleButton
+                      hex={item.hex}
+                      onClick={() => setColorModalRowId(item.id)}
+                    />
+                    <input
+                      type="text"
+                      value={item.color ?? ""}
+                      onChange={(e) => applyNameToRow(item.id, e.target.value)}
+                      placeholder="Color"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
+                      onBlur={(e) => {
+                        const typed = e.target.value;
+                        const matchHex = hexForNameFlexible(typed);
+                        if (matchHex) {
+                          const canonical = canonicalNameForHex(matchHex) || nearestNameForHex(matchHex);
+                          patchRow(item.id, { color: canonical, hex: matchHex });
+                        } else {
+                          patchRow(item.id, { color: canonicalNameForHex(item.hex) || nearestNameForHex(item.hex) });
+                        }
+                      }}
+                    />
+                  </div>
+
                   <input
                     type="text"
-                    value={form.sku ?? ""}
-                    onChange={(event) => handleChange("sku", event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:outline-none focus:ring-2 focus:ring-[#1E3763]/30"
+                    value={item.size}
+                    onChange={(e) => patchRow(item.id, { size: e.target.value })}
+                    placeholder="Talle"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={item.stock}
+                    onChange={(e) => patchRow(item.id, { stock: e.target.value })}
+                    placeholder="Cantidad"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700">En stock</label>
-                  <label className="mt-1 inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(form.inStock)}
-                      onChange={(event) => handleChange("inStock", event.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-[#1E3763] focus:ring-[#1E3763]"
-                    />
-                    Disponible
-                  </label>
+              ))}
+
+              {/* Fila de Agregar */}
+              <div
+                className="grid items-center gap-3 pt-2 relative"
+                style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setColorMenuOpen((p) => !p)}
+                  className="flex items-center justify-center h-8 w-8 rounded-full border border-[#1E3763] text-[#1E3763] hover:bg-[#1E3763]/10"
+                  aria-label="Agregar variante"
+                >
+                  <FaPlus size={13} />
+                </button>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setColorMenuOpen((p) => !p)}
+                    className="flex items-center justify-between w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-[#1E3763]/10"
+                  >
+                    Agregar
+                    <svg className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="none">
+                      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
+                    </svg>
+                  </button>
+
+                  {colorMenuOpen && (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                      {COLOR_OPTIONS.map((c) => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          onClick={() =>
+                            setStockItems((prev) => [
+                              ...prev,
+                              { id: generateId(), color: c.label, hex: c.hex, size: "", stock: "" },
+                            ])
+                          }
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-[#1E3763]/10"
+                        >
+                          <span className="h-3.5 w-3.5 rounded-full border" style={{ backgroundColor: c.hex }} />
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">Agregar</div>
+                <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">Agregar</div>
               </div>
             </div>
           )}
 
+          {/* Footer */}
           <div className="flex items-center justify-between pt-2">
             <button
               type="button"
-              onClick={handleDeleteClick}
+              onClick={() => onDelete?.(form)}
               className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
             >
               Eliminar Producto
@@ -402,6 +405,7 @@ const ProductEditModal = ({ product, onClose, onSave, onDelete }) => {
               </button>
               <button
                 type="submit"
+                onClick={handleSubmit}
                 className="rounded-lg bg-[#1E3763] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16294a]"
               >
                 Guardar
@@ -410,8 +414,19 @@ const ProductEditModal = ({ product, onClose, onSave, onDelete }) => {
           </div>
         </form>
       </div>
+
+      {/* MODAL DE COLORES */}
+      <ColorPickerModal
+        isOpen={!!colorModalRowId}
+        initialHex={stockItems.find((i) => i.id === colorModalRowId)?.hex || "#1E3763"}
+        initialOpacity={1}
+        onCancel={() => setColorModalRowId(null)}
+        onApply={(hex /*, opacity */) => {
+          if (!colorModalRowId) return;
+          applyHexToRow(colorModalRowId, hex);
+          setColorModalRowId(null);
+        }}
+      />
     </div>
   );
-};
-
-export default ProductEditModal;
+}

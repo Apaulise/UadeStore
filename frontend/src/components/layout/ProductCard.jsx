@@ -24,7 +24,7 @@ const EditIcon = (props) => (
   </svg>
 );
 
-const ProductCard = ({ product, variant = 'catalog' }) => {
+const ProductCard = ({ product, variant = 'catalog', onEdit }) => {
   console.log("1. ¿Qué llega en la prop 'product'?", product);
   const navigate = useNavigate(); // Get the navigate function
   if (!product) return null;

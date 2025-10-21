@@ -1,10 +1,7 @@
-// src/components/layout/ProductCard.jsx
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { useCart } from '../../context/CartContext';
+﻿import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { toast } from "react-hot-toast";
+import { useCart } from "../../context/CartContext";
 
 const EditIcon = (props) => (
   <svg
@@ -24,35 +21,42 @@ const EditIcon = (props) => (
   </svg>
 );
 
-const ProductCard = ({ product, variant = 'catalog', onEdit }) => {
-  console.log("1. ¿Qué llega en la prop 'product'?", product);
-  const navigate = useNavigate(); // Get the navigate function
+const ensureHex = (value) => {
+  if (!value) return "#1F3B67";
+  return value.startsWith("#") ? value : `#${value}`;
+};
+
+const ProductCard = ({ product, variant = "catalog", onEdit }) => {
+  const { addItem } = useCart();
+
   if (!product) return null;
 
-  const allColorObjects = product.Stock.map(stockid => stockid.Color);
-  console.log("2. ¿Qué se extrae en 'allColorObjects'?", allColorObjects);
+  const defaultVariant = useMemo(() => {
+    if (product.defaultVariant) return product.defaultVariant;
+    const variants = product.variants ?? [];
+    return variants.find((item) => item.available) ?? variants[0] ?? null;
+  }, [product]);
 
-    // 2. Creamos una lista de colores únicos usando un Map por el ID del color
-    const uniqueColorsMap = new Map();
-    allColorObjects.forEach(color => {
-      if (color) { // Asegurarnos que el color no es nulo
-        uniqueColorsMap.set(color.id, color);
-      }
-    });
-    const uniqueColors = Array.from(uniqueColorsMap.values());
-    console.log("3. ¿Qué queda en 'uniqueColors'?", uniqueColors);
-    const handleClick = () => {
-      // Optional: Do something else here if needed
-      console.log('Navigating to product:', product.id);
-      
-      // Navigate to the desired URL
-      navigate(`/producto/${product.id}`); 
-    };
-    const imageUrl = product.Imagen[0]?.imagen;
+  const handleQuickAdd = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!defaultVariant?.stockId) {
+      toast.error("No hay stock disponible para este producto");
+      return;
+    }
+
+    try {
+      await addItem({ stockId: defaultVariant.stockId, quantity: 1 });
+      toast.success("Producto agregado al carrito");
+    } catch (err) {
+      toast.error("No se pudo agregar al carrito");
+    }
+  };
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded-lg bg-[#E2DCD4] p-4 shadow-sm">
-      {variant === 'admin' && (
+      {variant === "admin" && (
         <button
           type="button"
           onClick={(event) => {
@@ -71,41 +75,43 @@ const ProductCard = ({ product, variant = 'catalog', onEdit }) => {
         className="flex flex-1 flex-col items-center gap-3 text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
       >
         <div className="flex h-48 w-full items-center justify-center overflow-hidden rounded-md bg-gray-200">
-          {imageUrl ? (
+          {product.image ? (
             <img
-              src={imageUrl}
-              alt={product.Titulo}
+              src={product.image}
+              alt={product.name}
               className="h-full w-full object-cover"
               loading="lazy"
             />
-          ) : null}
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm text-gray-600">
+              Sin imagen
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-center">
-          <h3 className="text-lg font-semibold text-brand-text">
-            {product.Titulo}
-          </h3>
+          <h3 className="text-lg font-semibold text-brand-text">{product.name}</h3>
           <p className="text-xl font-bold text-brand-text">
-            ${Number(product.precio).toFixed(2)}
+            ${Number(product.price ?? 0).toFixed(2)}
           </p>
-          <div className="flex items-center gap-x-2">
-              {uniqueColors.map((color) => (
-                <div
-                  key={color.id}
-                  className="h-4 w-4 rounded-full border border-black/10"
-                  // 👇 CAMBIO CLAVE: Agregamos el '#' al principio del color
-                  style={{ backgroundColor: `#${color.hexa}` }}
-                  title={color.nombre}
-                />
-              ))}
+          {defaultVariant?.colorName && (
+            <div className="flex items-center gap-2 text-xs text-brand-text/70">
+              <span
+                className="h-4 w-4 rounded-full border border-black/10"
+                style={{ backgroundColor: ensureHex(defaultVariant.colorHex) }}
+                title={defaultVariant.colorName}
+              />
+              <span>{defaultVariant.colorName}</span>
             </div>
-          </div>
+          )}
+        </div>
       </Link>
 
-      {variant === 'catalog' && (
+      {variant === "catalog" && (
         <div className="mt-4 flex justify-center">
           <button
-            onClick={handleClick} // Call the function on click
-            className="w-full rounded-lg bg-brand-blue py-2 font-semibold text-white transition hover:brightness-110"
+            onClick={handleQuickAdd}
+            disabled={!defaultVariant?.available}
+            className="w-full rounded-lg bg-brand-blue py-2 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-brand-blue/40"
           >
             Agregar al carrito
           </button>

@@ -33,3 +33,27 @@ export const OrdersAPI = {
       body: JSON.stringify({ items, total }),
     }),
 };
+
+export const CartAPI = {
+  get: (userId = 1) => http(`/cart?userId=${userId}`),
+  addItem: ({ stockId, quantity = 1, userId = 1 }) =>
+    http("/cart", {
+      method: "POST",
+      body: JSON.stringify({ stockId, quantity, userId }),
+    }),
+  updateQuantity: ({ cartId, quantity, userId = 1 }) =>
+    http(`/cart/${cartId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ quantity, userId }),
+    }),
+  remove: ({ cartId, userId = 1 }) =>
+    http(`/cart/${cartId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ userId }),
+    }),
+  clear: (userId = 1) =>
+    http("/cart", {
+      method: "DELETE",
+      body: JSON.stringify({ userId }),
+    }),
+};

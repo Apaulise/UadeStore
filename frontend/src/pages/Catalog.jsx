@@ -1,281 +1,298 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import ProductCard from '../components/layout/ProductCard';
-import { data, useSearchParams } from 'react-router-dom';
-import { ProductsAPI } from '../services/api';
-//import { products as mockProducts } from '../data/products';
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import ProductCard from "../components/layout/ProductCard";
+import { ProductsAPI } from "../services/api";
+import { resolveCategory, categoryToSlug } from "../data/products";
 
-const categories = [
-  { name: "NUESTROS BASICOS",  slug: "nuestros-basicos" },
-  { name: "BESTSELLERS",  slug: "bestsellers" },
-  { name: "ACCESORIO",  slug: "accesorios" },
-  { name: "LIBRERIA",  slug: "libreria" },
-];
+const normalizeProduct = (product) => {
+  const variants = (product.Stock ?? []).map((stock) => ({
+    stockId: stock.id,
+    size: stock.talle,
+    available: (stock.stock ?? 0) > 0,
+    availableUnits: stock.stock ?? 0,
+    colorId: stock.Color?.id ?? null,
+    colorName: stock.Color?.nombre ?? null,
+    colorHex: stock.Color?.hexa ?? null,
+  }));
+
+  const firstImage = product.Imagen?.[0]?.imagen ?? null;
+  const category = resolveCategory(product.categoria);
+
+  const defaultVariant = variants.find((variant) => variant.available) ?? variants[0] ?? null;
+
+  return {
+    id: product.id,
+    name: product.Titulo,
+    price: Number(product.precio ?? 0),
+    description: product.descripcion ?? "",
+    category,
+    image: firstImage,
+    variants,
+    defaultVariant,
+    hasStock: variants.some((variant) => variant.available),
+  };
+};
+
+const initialFilters = {
+  category: null,
+  sizes: [],
+  colors: [],
+  inStockOnly: false,
+  maxPrice: 0,
+  query: "",
+};
 
 const Catalog = () => {
-  // --- ESTADOS ---
-  const [allProducts, setAllProducts] = useState([]); // Lista maestra de productos
-  const [filteredProducts, setFilteredProducts] = useState([]); // Lista que se muestra al usuario
-  const [filters, setFilters] = useState({
-    category: null,
-    sizes: [],
-    colors: [],
-    inStockOnly: false,
-    maxPrice: 100,
-    query: '',
-  });
-
+  const [allProducts, setAllProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [filters, setFilters] = useState(initialFilters);
+  const [priceCeiling, setPriceCeiling] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); 
-  
+  const [error, setError] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-
 
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        // Llamada correcta a la función y se espera la data
-        const data = await ProductsAPI.list(); 
-        // La respuesta de la API se guarda directamente en allProducts
-        setAllProducts(data); 
-        if (data && data.length > 0) {
-        const maxInitialPrice = Math.max(...data.map(p => p.precio));
-        setFilters(prev => ({ ...prev, maxPrice: maxInitialPrice }));
-      }
+        const data = await ProductsAPI.list();
+        const normalized = data.map(normalizeProduct);
+        setAllProducts(normalized);
+        const maxPrice = normalized.reduce(
+          (max, product) => Math.max(max, Number(product.price) || 0),
+          0,
+        );
+        setPriceCeiling(maxPrice || 0);
+        setFilters((prev) => ({ ...prev, maxPrice: maxPrice || 0 }));
+        setError(null);
       } catch (err) {
-        setError(err.message);
+        console.error("Error al cargar productos", err);
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchProducts();
-    
   }, []);
-  // sincroniza filtros con la URL (q y categoria)
+
   useEffect(() => {
-    const q = searchParams.get('q') || '';
-    const categorySlugFromURL = searchParams.get('categoria');
+    const q = searchParams.get("q") || "";
+    const categoryParam = searchParams.get("categoria");
+    const normalizedCategory = resolveCategory(categoryParam);
 
-    // Buscamos el objeto de categoría que coincide con el slug
-    const foundCategory = categories.find(cat => cat.slug === categorySlugFromURL);
-
-    // Actualizamos el filtro con el NOMBRE COMPLETO de la categoría, o null si no se encuentra
-    setFilters((prev) => ({ 
-      ...prev, 
-      query: q, 
-      category: foundCategory ? foundCategory.name : null 
+    setFilters((prev) => ({
+      ...prev,
+      query: q,
+      category: normalizedCategory,
+      colors: prev.category === normalizedCategory ? prev.colors : [],
+      sizes: prev.category === normalizedCategory ? prev.sizes : [],
     }));
   }, [searchParams]);
 
-  const normalize = (value = '') =>
-    value
-      .normalize('NFD')
-      .replace(/\p{Diacritic}+/gu, '')
-      .toLowerCase();
-
-  const matchesQuery = (product, term) => {
-    const normalizedTerm = normalize(term.trim());
-    if (!normalizedTerm) return true;
-
-    const termParts = normalizedTerm.split(/\s+/).filter(Boolean);
-    if (termParts.length === 0) return true;
-
-    const searchableValues = [
-      product.name,
-      product.category,
-      product.color,
-      product.size,
-      product.id,
-      ...(product.tags || []),
-    ]
-      .filter(Boolean)
-      .map((value) => normalize(String(value)));
-
-    if (searchableValues.length === 0) return false;
-
-    const productWords = searchableValues
-      .join(' ')
-      .split(/\s+/)
-      .filter(Boolean);
-
-    return termParts.every((part) =>
-      productWords.some((word) => word.startsWith(part))
-    );
-  };
-
-  // motor de filtrado
   useEffect(() => {
     let products = [...allProducts];
-    console.log("productos motor", products)
+
     if (filters.category) {
-      products = products.filter((p) => 
-        p.categoria.toLowerCase() === filters.category.toLowerCase()
+      products = products.filter((product) => product.category === filters.category);
+    }
+
+    if (filters.sizes.length > 0) {
+      products = products.filter((product) =>
+        product.variants.some(
+          (variant) => variant.size && filters.sizes.includes(variant.size),
+        ),
       );
     }
-    if (filters.sizes.length > 0) {
-    products = products.filter((p) =>
-      p.Stock.some(stockItem => filters.sizes.includes(stockItem.talle))
-    );
-  }
 
-  if (filters.colors.length > 0) {
-    products = products.filter((p) =>
-      p.Stock.some(stockItem => filters.colors.includes(stockItem.Color.nombre))
-    );
-  }
+    if (filters.colors.length > 0) {
+      products = products.filter((product) =>
+        product.variants.some(
+          (variant) => variant.colorName && filters.colors.includes(variant.colorName),
+        ),
+      );
+    }
 
-  if (filters.inStockOnly) {
-    products = products.filter((p) =>
-      // CAMBIO: Usamos la propiedad 'stock' en lugar de 'cantidad'
-      p.Stock.some(stockItem => stockItem.stock > 0)
-    );
-  }
+    if (filters.inStockOnly) {
+      products = products.filter((product) => product.hasStock);
+    }
 
-  products = products.filter((p) => p.precio <= filters.maxPrice);
+    if (filters.maxPrice) {
+      products = products.filter((product) => Number(product.price) <= filters.maxPrice);
+    }
 
-  // Búsqueda por texto
-  if (filters.query && filters.query.trim()) {
-    const term = filters.query.toLowerCase();
-    products = products.filter((p) => {
-      // CAMBIO: Usamos 'Titulo' en lugar de 'name' y 'categoria'
-      const fields = [p.Titulo, p.categoria]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return fields.includes(term);
-    });
-  }
-  
-  console.log("desp filtrado", products);
-  setFilteredProducts(products);
-}, [filters, allProducts]);
+    if (filters.query && filters.query.trim()) {
+      const term = filters.query.trim().toLowerCase();
+      products = products.filter((product) => {
+        const combined = [
+          product.name,
+          product.category,
+          product.description,
+          ...(product.variants ?? []).map((variant) => variant.colorName ?? ""),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return combined.includes(term);
+      });
+    }
 
-  // opciones dinámicas
+    setFilteredProducts(products);
+  }, [filters, allProducts]);
+
   const availableOptions = useMemo(() => {
     const relevantProducts = filters.category
-      ? allProducts.filter((p) => p.category === filters.category)
+      ? allProducts.filter((product) => product.category === filters.category)
       : allProducts;
 
-    const sizes = new Set(
-      relevantProducts.flatMap(p => p.Stock.map(stockItem => stockItem.talle))
-    );
-    const colors = new Set(
-      relevantProducts.flatMap(p => p.Stock.map(stockItem => stockItem.Color.nombre))
-    );
-    const categories = new Set(allProducts.map((p) => p.categoria));
+    const sizeSet = new Set();
+    const colorSet = new Set();
+    relevantProducts.forEach((product) => {
+      product.variants.forEach((variant) => {
+        if (variant.size) sizeSet.add(variant.size);
+        if (variant.colorName) colorSet.add(variant.colorName);
+      });
+    });
+
+    const categories = Array.from(
+      new Set(allProducts.map((product) => product.category).filter(Boolean)),
+    ).sort();
 
     return {
-      sizes: Array.from(sizes).sort(),
-      colors: Array.from(colors).sort(),
-      categories: Array.from(categories).sort(),
+      sizes: Array.from(sizeSet).sort(),
+      colors: Array.from(colorSet).sort(),
+      categories,
     };
   }, [allProducts, filters.category]);
 
-  // manejadores
-  const handleCategoryChange = (categoryName) => {
-  // --- SOLUCIÓN AL PROBLEMA #2 ---
-  const isActive = filters.category?.toLowerCase() === categoryName.toLowerCase();
-  const newCategoryName = isActive ? null : categoryName;
+  const handleCategoryChange = (categoryLabel) => {
+    const nextCategory = filters.category === categoryLabel ? null : categoryLabel;
+    setFilters((prev) => ({
+      ...prev,
+      category: nextCategory,
+      colors: [],
+      sizes: [],
+    }));
 
-  setFilters((prev) => ({ ...prev, category: newCategoryName }));
-
-  if (newCategoryName) {
-    // Buscamos el slug que corresponde al nombre de la categoría
-    const foundCategory = categories.find(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase());
-    if (foundCategory) {
-      searchParams.set('categoria', foundCategory.slug);
+    const params = new URLSearchParams(searchParams);
+    if (!nextCategory) {
+      params.delete("categoria");
+    } else {
+      params.set("categoria", categoryToSlug(nextCategory));
     }
-  } else {
-    searchParams.delete('categoria');
-  }
-  setSearchParams(searchParams);
-};
+    setSearchParams(params);
+  };
 
   const handleCheckboxChange = (filterType, value) => {
     setFilters((prev) => {
       const currentValues = prev[filterType];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter((item) => item !== value)
+      const exists = currentValues.includes(value);
+      const nextValues = exists
+        ? currentValues.filter((entry) => entry !== value)
         : [...currentValues, value];
-      return { ...prev, [filterType]: newValues };
+      return { ...prev, [filterType]: nextValues };
     });
   };
 
-  const handleStockChange = (e) => {
-    setFilters((prev) => ({ ...prev, inStockOnly: e.target.checked }));
+  const handleStockChange = (event) => {
+    setFilters((prev) => ({ ...prev, inStockOnly: event.target.checked }));
   };
 
-  const handlePriceChange = (e) => {
-    setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) }));
+  const handlePriceChange = (event) => {
+    setFilters((prev) => ({ ...prev, maxPrice: Number(event.target.value) }));
   };
 
   const clearFilters = () => {
-    setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: 100, query: '' });
-    setSearchParams({});
+    setFilters({ ...initialFilters, maxPrice: priceCeiling });
+    setSearchParams(new URLSearchParams());
   };
 
-  if (loading) return <div className="text-center py-16">Cargando productos...</div>;
-  if (error) return <div className="text-center py-16 text-red-500">Error: {error}</div>;
-
-  // vista
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Catalogo</h1>
-      <p className="text-gray-600 mb-8">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-gray-900">Catalogo</h1>
+      {error && (
+        <p className="mb-4 rounded-md bg-red-100 px-4 py-2 text-sm text-red-800">
+          Ocurrió un error al cargar los productos. Intenta nuevamente.
+        </p>
+      )}
+      <p className="mb-8 text-gray-600">
         Mostrando {filteredProducts.length} de {allProducts.length} productos.
       </p>
 
-      <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
-        {/* --- Columna de Filtros (Izquierda) --- */}
-        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0">
+      <div className="flex flex-col gap-8 md:flex-row lg:gap-12">
+        <aside className="w-full flex-shrink-0 md:w-64 lg:w-72">
           <div className="sticky top-8">
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold">Filtros</h2>
-              <button onClick={clearFilters} className="text-sm font-medium text-blue-600 hover:text-blue-800">Limpiar</button>
+              <button
+                onClick={clearFilters}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Limpiar
+              </button>
             </div>
 
             <div className="space-y-6 border-t pt-6">
-              {/* Filtro de Categoria */}
               <div>
-                <h3 className="font-semibold mb-2">Categoria</h3>
+                <h3 className="mb-2 font-semibold">Categoria</h3>
                 <div className="space-y-1">
-                  {availableOptions.categories.map((cat) => (
+                  {availableOptions.categories.map((category) => (
                     <button
-                      key={cat}
-                      onClick={() => handleCategoryChange(cat)}
-                      className={`block w-full text-left px-2 py-1 rounded ${filters.category === cat ? 'bg-blue-100 font-semibold' : ''}`}
+                      key={category}
+                      type="button"
+                      onClick={() => handleCategoryChange(category)}
+                      className={`block w-full rounded px-2 py-1 text-left ${
+                        filters.category === category ? "bg-blue-100 font-semibold" : ""
+                      }`}
                     >
-                      {cat}
+                      {category}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Filtro de Disponibilidad */}
               <div>
-                <h3 className="font-semibold mb-2">Disponibilidad</h3>
+                <h3 className="mb-2 font-semibold">Disponibilidad</h3>
                 <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={filters.inStockOnly} onChange={handleStockChange} className="rounded" />
+                  <input
+                    type="checkbox"
+                    checked={filters.inStockOnly}
+                    onChange={handleStockChange}
+                    className="rounded"
+                  />
                   En Stock
                 </label>
               </div>
 
-              {/* Filtro de Precio */}
               <div>
-                <h3 className="font-semibold mb-2">Precio</h3>
-                <input type="range" min="10" max="100" value={filters.maxPrice} onChange={handlePriceChange} className="w-full" />
-                <div className="text-sm text-gray-600 text-center">Hasta ${filters.maxPrice}</div>
+                <h3 className="mb-2 font-semibold">Precio</h3>
+                <input
+                  type="range"
+                  min={0}
+                  max={priceCeiling || 0}
+                  value={filters.maxPrice || 0}
+                  onChange={handlePriceChange}
+                  className="w-full"
+                  disabled={!priceCeiling}
+                />
+                <div className="text-center text-sm text-gray-600">
+                  Hasta ${Number(filters.maxPrice || 0).toFixed(2)}
+                </div>
               </div>
 
-              {/* Filtro de Talle (din�mico) */}
               {availableOptions.sizes.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-2">Talle</h3>
+                  <h3 className="mb-2 font-semibold">Talle</h3>
                   <div className="space-y-1">
                     {availableOptions.sizes.map((size) => (
                       <label key={size} className="flex items-center gap-2">
-                        <input type="checkbox" value={size} checked={filters.sizes.includes(size)} onChange={() => handleCheckboxChange('sizes', size)} className="rounded" />
+                        <input
+                          type="checkbox"
+                          value={size}
+                          checked={filters.sizes.includes(size)}
+                          onChange={() => handleCheckboxChange("sizes", size)}
+                          className="rounded"
+                        />
                         {size}
                       </label>
                     ))}
@@ -283,14 +300,19 @@ const Catalog = () => {
                 </div>
               )}
 
-              {/* Filtro de Color (din�mico) */}
               {availableOptions.colors.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-2">Color</h3>
+                  <h3 className="mb-2 font-semibold">Color</h3>
                   <div className="space-y-1">
                     {availableOptions.colors.map((color) => (
                       <label key={color} className="flex items-center gap-2">
-                        <input type="checkbox" value={color} checked={filters.colors.includes(color)} onChange={() => handleCheckboxChange('colors', color)} className="rounded" />
+                        <input
+                          type="checkbox"
+                          value={color}
+                          checked={filters.colors.includes(color)}
+                          onChange={() => handleCheckboxChange("colors", color)}
+                          className="rounded"
+                        />
                         {color}
                       </label>
                     ))}
@@ -301,21 +323,21 @@ const Catalog = () => {
           </div>
         </aside>
 
-        {/* --- Columna de Productos (Derecha) --- */}
         <main className="flex-1">
-        
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading ? (
+            <div className="py-16 text-center text-gray-600">Cargando productos...</div>
+          ) : filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProducts.map((product) => (
-                console.log("llegue aca2"),
-                <ProductCard key={product.id} product={product} variant={"catalog"} />
+                <ProductCard key={product.id} product={product} variant="catalog" />
               ))}
             </div>
           ) : (
-            console.log("llegue aca"),
-            <div className="text-center py-16">
+            <div className="py-16 text-center">
               <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-              <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos para ver mas resultados.</p>
+              <p className="mt-2 text-gray-600">
+                Intenta ajustar tus filtros o limpiarlos para ver más resultados.
+              </p>
             </div>
           )}
         </main>
@@ -325,4 +347,3 @@ const Catalog = () => {
 };
 
 export default Catalog;
-

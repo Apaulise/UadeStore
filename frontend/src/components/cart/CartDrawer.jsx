@@ -16,7 +16,7 @@ const TrashIcon = (props) => (
 
 const CartDrawer = () => {
   const navigate = useNavigate();
-  const { items, isOpen, close, removeItem, increment, decrement, total, clear } = useCart();
+  const { items, isOpen, close, removeItem, increment, decrement, total, isLoading } = useCart();
 
   const handleCheckout = () => {
     if (items.length === 0) return;
@@ -49,16 +49,24 @@ const CartDrawer = () => {
         </div>
 
         <div className="divide-y overflow-y-auto px-5">
-          {items.length === 0 && (
+          {isLoading && (
+            <p className="py-8 text-center text-sm text-gray-600">Cargando carrito...</p>
+          )}
+
+          {!isLoading && items.length === 0 && (
             <p className="py-8 text-center text-sm text-gray-600">Tu carrito esta vacio.</p>
           )}
 
-          {items.map((item, idx) => (
-            <div key={`${item.id}-${item.size || "_"}-${item.color || "_"}-${idx}`} className="flex gap-3 py-4">
+          {items.map((item) => (
+            <div key={item.cartId ?? item.id} className="flex gap-3 py-4">
               <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-gray-200">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                ) : console.log("item", item) }
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-500">
+                    Sin imagen
+                  </div>
+                )}
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">
@@ -68,16 +76,28 @@ const CartDrawer = () => {
                     {item.size && <p className="text-xs text-gray-600">Talle: {item.size}</p>}
                     <p className="text-xs text-gray-600">Cantidad: {item.quantity}</p>
                   </div>
-                  <p className="whitespace-nowrap text-sm font-bold">${(Number(item.price) * (item.quantity || 1)).toFixed(2)}</p>
+                  <p className="whitespace-nowrap text-sm font-bold">
+                    ${Number(item.subtotal ?? item.price ?? 0).toFixed(2)}
+                  </p>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => decrement(item.id, { size: item.size, color: item.color })} className="h-6 w-6 rounded bg-gray-200 text-sm font-semibold">-</button>
+                    <button
+                      onClick={() => decrement(item.cartId ?? item.id)}
+                      className="h-6 w-6 rounded bg-gray-200 text-sm font-semibold"
+                    >
+                      -
+                    </button>
                     <span className="w-6 text-center text-sm">{item.quantity}</span>
-                    <button onClick={() => increment(item.id, { size: item.size, color: item.color })} className="h-6 w-6 rounded bg-gray-200 text-sm font-semibold">+</button>
+                    <button
+                      onClick={() => increment(item.cartId ?? item.id)}
+                      className="h-6 w-6 rounded bg-gray-200 text-sm font-semibold"
+                    >
+                      +
+                    </button>
                   </div>
                   <button
-                    onClick={() => removeItem(item.id, { size: item.size, color: item.color })}
+                    onClick={() => removeItem(item.cartId ?? item.id)}
                     className="rounded p-1 text-gray-600 hover:bg-black/5"
                     aria-label="Eliminar del carrito"
                   >

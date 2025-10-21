@@ -6,19 +6,26 @@ import tiendaExteriorImg from "../assets/exterioruade.jpg";
 export const CATEGORY_ALIASES = {
   bestsellers: "Bestsellers",
   "nuestros-basicos": "Nuestros Basicos",
+  "nuestros basicos": "Nuestros Basicos",
+  "nuestros_basicos": "Nuestros Basicos",
   accesorios: "Accesorios",
   libreria: "Libreria",
 };
 
 export const resolveCategory = (value) => {
   if (!value) return null;
-  const normalized = value.toLowerCase();
+  const normalized = value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+|_/g, "-");
   return CATEGORY_ALIASES[normalized] ?? value;
 };
 
 export const categoryToSlug = (value) => {
   if (!value) return "";
-  const lower = value.toLowerCase();
+  const resolved = resolveCategory(value);
+  const lower = resolved.toString().trim().toLowerCase();
   const match = Object.entries(CATEGORY_ALIASES).find(
     ([, label]) => label.toLowerCase() === lower
   );

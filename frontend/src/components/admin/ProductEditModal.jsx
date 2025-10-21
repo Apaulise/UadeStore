@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FaTrash, FaPlus } from "react-icons/fa";
+﻿import { useEffect, useMemo, useState } from "react";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import ColorPickerModal from "./ColorPickerModal";
 
 const tabs = [
@@ -7,202 +7,134 @@ const tabs = [
   { id: "stock", label: "Stock" },
 ];
 
-/** Paleta base con nombres canónicos */
-const COLOR_OPTIONS = [
-  { label: "Azul",     hex: "#1E3763" },
-  { label: "Rojo",     hex: "#E03131" },
-  { label: "Verde",    hex: "#2F9E44" },
+const DEFAULT_COLORS = [
+  { label: "Negro", hex: "#000000" },
+  { label: "Azul", hex: "#1E3763" },
   { label: "Amarillo", hex: "#F59F00" },
-  { label: "Marrón",   hex: "#795548" },
-  { label: "Celeste",  hex: "#1C7ED6" },
-  { label: "Negro",    hex: "#111111" },
-  { label: "Blanco",   hex: "#F8F9FA" },
-  { label: "Violeta",  hex: "#7C3AED" },
-  { label: "Naranja",  hex: "#F97316" },
-  { label: "Gris",     hex: "#6B7280" },
+  { label: "Rojo", hex: "#E03131" },
+  { label: "Verde", hex: "#2F9E44" },
+  { label: "Celeste", hex: "#1C7ED6" },
+  { label: "Blanco", hex: "#F8F9FA" },
+  { label: "Naranja", hex: "#F97316" },
+  { label: "Violeta", hex: "#7C3AED" },
+  { label: "Gris", hex: "#6B7280" },
 ];
 
-/** Sinónimos (normalizados) → nombre canónico */
-const COLOR_SYNONYMS = {
-  "marron": "Marrón",
-  "marrón": "Marrón",
-  "castaño": "Marrón",
-  "azul claro": "Celeste",
-  "celeste": "Celeste",
-  "purpura": "Violeta",
-  "púrpura": "Violeta",
-  "violeta": "Violeta",
-  "morado": "Violeta",
-  "naranjado": "Naranja",
-  "gris": "Gris",
-  "plata": "Gris",
-  "blanco": "Blanco",
-  "negro": "Negro",
-  "azul": "Azul",
-  "rojo": "Rojo",
-  "verde": "Verde",
-  "amarillo": "Amarillo",
-  "naranja": "Naranja",
+const ensureHex = (value, fallback = "#1F3B67") => {
+  if (!value) return fallback;
+  const normalized = value.toString().trim();
+  const sanitized = normalized.startsWith("#") ? normalized : `#${normalized}`;
+  return /^#[0-9a-fA-F]{6}$/.test(sanitized)
+    ? sanitized.toUpperCase()
+    : fallback;
 };
 
-/* ================= Helpers ================= */
-const generateId = () => Math.random().toString(36).substring(2, 9);
+const createKey = () => Math.random().toString(36).slice(2, 9);
 
-const hexToRgb = (hex) => {
-  const c = (hex || "#000").replace("#", "").trim();
-  const m = c.length === 3 ? c.split("").map(ch => ch + ch).join("") : c.slice(0, 6).padEnd(6, "0");
-  return { r: parseInt(m.slice(0, 2), 16), g: parseInt(m.slice(2, 4), 16), b: parseInt(m.slice(4, 6), 16) };
-};
-const rgbDist2 = (h1, h2) => {
-  const a = hexToRgb(h1), b = hexToRgb(h2);
-  const dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
-  return dr * dr + dg * dg + db * db;
-};
-const normalize = (s = "") =>
-  s.toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
+const createVariant = (initial = {}) => ({
+  key: initial.key ?? createKey(),
+  id: initial.id ?? null,
+  colorName: initial.color ?? initial.colorName ?? "",
+  hex: ensureHex(initial.hex),
+  size: initial.size ?? "",
+  stock: Number(initial.stock ?? 0),
+});
 
-const NAME_TO_HEX = (() => {
-  const map = new Map();
-  for (const { label, hex } of COLOR_OPTIONS) map.set(normalize(label), hex);
-  for (const [syn, canonical] of Object.entries(COLOR_SYNONYMS)) {
-    const hex = COLOR_OPTIONS.find(c => c.label === canonical)?.hex;
-    if (hex) map.set(normalize(syn), hex);
-  }
-  return map;
-})();
+const formatColorOption = (color) => ({
+  id: color.id ?? null,
+  label: color.nombre ?? color.label ?? "",
+  hex: ensureHex(color.hexa ?? color.hex ?? "#1F3B67"),
+});
 
-const HEX_TO_NAME = (() => {
-  const map = new Map();
-  for (const { label, hex } of COLOR_OPTIONS) map.set(hex.toLowerCase(), label);
-  return map;
-})();
+export default function ProductEditModal({ product, colorsCatalog = [], onClose, onSave, onDelete }) {
+  const colorOptions = useMemo(() => {
+    const list = colorsCatalog.length ? colorsCatalog.map(formatColorOption) : DEFAULT_COLORS;
+    const unique = new Map();
+    list.forEach((opt) => {
+      const key = opt.label.trim().toLowerCase();
+      if (!unique.has(key)) unique.set(key, opt);
+    });
+    return Array.from(unique.values());
+  }, [colorsCatalog]);
 
-/** Encuentra el nombre más cercano para un hex */
-const nearestNameForHex = (hex) => {
-  const exact = HEX_TO_NAME.get((hex || "").toLowerCase());
-  if (exact) return exact;
-  let best = COLOR_OPTIONS[0], bestD = Infinity;
-  for (const opt of COLOR_OPTIONS) {
-    const d = rgbDist2(hex, opt.hex);
-    if (d < bestD) { bestD = d; best = opt; }
-  }
-  return best.label;
-};
-
-/** Devuelve el hex para un nombre (exacto/sinónimo/prefijo único). */
-const hexForNameFlexible = (name) => {
-  const key = normalize(name);
-  if (!key) return null;
-
-  // 1) Exacto o sinónimo
-  if (NAME_TO_HEX.has(key)) return NAME_TO_HEX.get(key);
-
-  // 2) Prefijo único entre nombres canónicos + sinónimos
-  const candidates = [];
-  for (const [n, h] of NAME_TO_HEX.entries()) {
-    if (n.startsWith(key)) candidates.push({ n, h });
-  }
-  if (candidates.length === 1) return candidates[0].h;
-  return null;
-};
-
-/** Nombre canónico para un hex (si exacto) */
-const canonicalNameForHex = (hex) => HEX_TO_NAME.get((hex || "").toLowerCase()) || null;
-/* =============== /Helpers ================== */
-
-export default function ProductEditModal({ product, onClose, onSave, onDelete }) {
   const [activeTab, setActiveTab] = useState("details");
-  const [form, setForm] = useState(() => (product ? { ...product } : null));
-
-  // ✅ SIN FILAS PREDETERMINADAS
-  const [stockItems, setStockItems] = useState(() => product?.stockItems ?? []);
-
-  const [colorMenuOpen, setColorMenuOpen] = useState(false);
-  const [colorModalRowId, setColorModalRowId] = useState(null);
+  const [form, setForm] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [colorPickerRow, setColorPickerRow] = useState(null);
 
   useEffect(() => {
     if (!product) return;
-    setForm({ ...product });
-    // ✅ si no trae stockItems, queda []
-    setStockItems(product.stockItems ?? []);
+    setForm({
+      id: product.id,
+      name: product.name ?? "",
+      price: Number(product.price ?? 0),
+      description: product.description ?? "",
+    });
+
+    const mappedVariants = (product.stockItems ?? []).map((item) =>
+      createVariant({
+        id: item.id ?? null,
+        color: item.color ?? "",
+        hex: item.hex,
+        size: item.size ?? "",
+        stock: Number(item.stock ?? 0),
+      })
+    );
+
+    setVariants(mappedVariants.length ? mappedVariants : [createVariant()]);
     setActiveTab("details");
-    setColorMenuOpen(false);
-    setColorModalRowId(null);
   }, [product]);
 
   if (!product || !form) return null;
 
-  const handleChange = (field, value) => setForm((p) => ({ ...p, [field]: value }));
-
-  const patchRow = (id, patch) => {
-    setStockItems(prev => prev.map(it => (it.id === id ? { ...it, ...patch } : it)));
+  const updateVariant = (key, patch) => {
+    setVariants((prev) =>
+      prev.map((variant) => (variant.key === key ? { ...variant, ...patch } : variant))
+    );
   };
 
-  /** HEX → NOMBRE (modal de colores) */
-  const applyHexToRow = (id, hex) => {
-    const canonical = canonicalNameForHex(hex) || nearestNameForHex(hex);
-    patchRow(id, { hex, color: canonical });
+  const removeVariant = (key) => {
+    setVariants((prev) => {
+      const next = prev.filter((variant) => variant.key !== key);
+      return next.length ? next : [createVariant()];
+    });
   };
 
-  /** NOMBRE → HEX (input de texto) */
-  const applyNameToRow = (id, rawName) => {
-    const matchHex = hexForNameFlexible(rawName);
-    if (matchHex) {
-      const canonical = canonicalNameForHex(matchHex) || nearestNameForHex(matchHex);
-      patchRow(id, { color: canonical, hex: matchHex });
-    } else {
-      patchRow(id, { color: rawName });
-    }
-  };
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const stockItems = variants
+      .map((variant) => ({
+        id: variant.id,
+        colorName: variant.colorName || "",
+        colorHex: variant.hex,
+        size: variant.size || null,
+        stock: Number.isFinite(Number(variant.stock)) ? Number(variant.stock) : 0,
+      }))
+      .filter((variant) =>
+        variant.colorName || variant.size || Number(variant.stock) > 0 || variant.id
+      );
 
-  const addStockRow = (opt) => {
-    setStockItems(prev => [
-      ...prev,
-      { id: generateId(), color: opt.label, hex: opt.hex, size: "", stock: "" },
-    ]);
-    setColorMenuOpen(false);
+    onSave?.({
+      ...form,
+      price: Number.isFinite(Number(form.price)) ? Number(form.price) : 0,
+      stockItems,
+    });
   };
-
-  const removeStockRow = (id) => {
-    setStockItems(prev => prev.filter(it => it.id !== id));
-    if (colorModalRowId === id) setColorModalRowId(null);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const stock = stockItems.reduce((a, it) => a + (Number(it.stock) || 0), 0);
-    onSave?.({ ...form, stockItems, stock });
-  };
-
-  const ColorCircleButton = ({ hex, onClick }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-6 w-6 rounded-full border transition-transform hover:scale-110 focus:scale-110 focus:outline-none 
-                  ${hex?.toLowerCase() === "#f8f9fa" ? "ring-1 ring-gray-300" : "ring-1 ring-black/10"}`}
-      style={{ backgroundColor: hex || "#1E3763" }}
-      title="Elegir color"
-      aria-label="Elegir color"
-    />
-  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-10">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-        {/* Header + Tabs */}
-        <div className="flex justify-between border-b px-6 pb-3 pt-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-3xl rounded-3xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => { setActiveTab(tab.id); setColorMenuOpen(false); setColorModalRowId(null); }}
-                className={`rounded-lg px-3 py-1 text-sm font-semibold transition ${
-                  activeTab === tab.id ? "bg-[#1E3763] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-1 text-sm font-semibold transition ${
+                  activeTab === tab.id
+                    ? "bg-[#1F3B67] text-white"
+                    : "bg-[#E9EDF7] text-[#1F3B67] hover:bg-[#D9E3FF]"
                 }`}
               >
                 {tab.label}
@@ -212,185 +144,133 @@ export default function ProductEditModal({ product, onClose, onSave, onDelete })
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100"
             aria-label="Cerrar"
           >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="none">
-              <path d="M6 6l8 8M6 14l8-8" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
-            </svg>
+            ×
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 p-6">
           {activeTab === "details" ? (
-            <>
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700">Nombre</label>
+                <label className="text-sm font-semibold text-brand-text">Nombre</label>
                 <input
                   type="text"
-                  value={form.name ?? ""}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-gray-700">Precio</label>
+                <label className="text-sm font-semibold text-brand-text">Precio</label>
                 <input
-                  type="number" step="0.01" min="0"
-                  value={form.price ?? ""}
-                  onChange={(e) => handleChange("price", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-gray-700">Descripción</label>
+                <label className="text-sm font-semibold text-brand-text">Descripción</label>
                 <textarea
                   rows={5}
-                  value={form.description ?? ""}
-                  onChange={(e) => handleChange("description", e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                 />
               </div>
-            </>
+            </div>
           ) : (
-            // === TAB STOCK ===
-            <div className="space-y-3">
-              <div
-                className="grid items-center gap-3 text-sm font-semibold text-gray-600"
-                style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
-              >
-                <span />
-                <span>Color</span>
-                <span>Talle</span>
-                <span>Stock Disp.</span>
-              </div>
+            <div className="space-y-4">
+              <header className="flex items-center justify-between text-xs font-semibold uppercase text-gray-500">
+                <span className="w-1/3">Color</span>
+                <span className="w-1/4">Talle</span>
+                <span className="w-1/4">Stock Disp.</span>
+                <span className="w-10" />
+              </header>
 
-              {stockItems.length === 0 && (
-                <div className="rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-500">
-                  No hay variantes aún. Usá <span className="font-semibold">“Agregar”</span> para crear la primera.
-                </div>
-              )}
-
-              {stockItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="grid items-center gap-3"
-                  style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => removeStockRow(item.id)}
-                    className="flex items-center justify-center h-8 w-8 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-500"
-                    aria-label="Eliminar variante"
+              <div className="space-y-3">
+                {variants.map((variant) => (
+                  <div
+                    key={variant.key}
+                    className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2"
                   >
-                    <FaTrash size={13} />
-                  </button>
+                    <div className="flex w-1/3 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setColorPickerRow(variant.key)}
+                        className="h-8 w-8 rounded-full border"
+                        style={{ backgroundColor: variant.hex }}
+                        aria-label="Cambiar color"
+                      />
+                      <input
+                        type="text"
+                        list="admin-color-options"
+                        value={variant.colorName}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          const option = colorOptions.find(
+                            (opt) => opt.label.toLowerCase() === value.toLowerCase()
+                          );
+                          updateVariant(variant.key, {
+                            colorName: value,
+                            hex: option ? option.hex : variant.hex,
+                          });
+                        }}
+                        placeholder="Color"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                      />
+                    </div>
 
-                  <div className="flex items-center gap-3">
-                    <ColorCircleButton
-                      hex={item.hex}
-                      onClick={() => setColorModalRowId(item.id)}
-                    />
                     <input
                       type="text"
-                      value={item.color ?? ""}
-                      onChange={(e) => applyNameToRow(item.id, e.target.value)}
-                      placeholder="Color"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
-                      onBlur={(e) => {
-                        const typed = e.target.value;
-                        const matchHex = hexForNameFlexible(typed);
-                        if (matchHex) {
-                          const canonical = canonicalNameForHex(matchHex) || nearestNameForHex(matchHex);
-                          patchRow(item.id, { color: canonical, hex: matchHex });
-                        } else {
-                          patchRow(item.id, { color: canonicalNameForHex(item.hex) || nearestNameForHex(item.hex) });
-                        }
-                      }}
+                      value={variant.size}
+                      onChange={(event) => updateVariant(variant.key, { size: event.target.value })}
+                      placeholder="Talle"
+                      className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                     />
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={variant.stock}
+                      onChange={(event) => updateVariant(variant.key, { stock: event.target.value })}
+                      placeholder="Cantidad"
+                      className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(variant.key)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                      aria-label="Eliminar variante"
+                    >
+                      <FaTrash size={12} />
+                    </button>
                   </div>
-
-                  <input
-                    type="text"
-                    value={item.size}
-                    onChange={(e) => patchRow(item.id, { size: e.target.value })}
-                    placeholder="Talle"
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
-                  />
-
-                  <input
-                    type="number"
-                    min="0"
-                    value={item.stock}
-                    onChange={(e) => patchRow(item.id, { stock: e.target.value })}
-                    placeholder="Cantidad"
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1E3763] focus:ring-2 focus:ring-[#1E3763]/30"
-                  />
-                </div>
-              ))}
-
-              {/* Fila de Agregar */}
-              <div
-                className="grid items-center gap-3 pt-2 relative"
-                style={{ gridTemplateColumns: "40px 1fr 1fr 1fr" }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setColorMenuOpen((p) => !p)}
-                  className="flex items-center justify-center h-8 w-8 rounded-full border border-[#1E3763] text-[#1E3763] hover:bg-[#1E3763]/10"
-                  aria-label="Agregar variante"
-                >
-                  <FaPlus size={13} />
-                </button>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setColorMenuOpen((p) => !p)}
-                    className="flex items-center justify-between w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-[#1E3763]/10"
-                  >
-                    Agregar
-                    <svg className="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="none">
-                      <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-                    </svg>
-                  </button>
-
-                  {colorMenuOpen && (
-                    <div className="absolute left-0 top-full z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                      {COLOR_OPTIONS.map((c) => (
-                        <button
-                          key={c.label}
-                          type="button"
-                          onClick={() =>
-                            setStockItems((prev) => [
-                              ...prev,
-                              { id: generateId(), color: c.label, hex: c.hex, size: "", stock: "" },
-                            ])
-                          }
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-[#1E3763]/10"
-                        >
-                          <span className="h-3.5 w-3.5 rounded-full border" style={{ backgroundColor: c.hex }} />
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">Agregar</div>
-                <div className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-400">Agregar</div>
+                ))}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setVariants((prev) => [...prev, createVariant()])}
+                className="flex items-center gap-2 rounded-full border border-[#1F3B67] px-4 py-2 text-sm font-semibold text-[#1F3B67] transition hover:bg-[#1F3B67]/10"
+              >
+                <FaPlus size={12} /> Agregar variante
+              </button>
             </div>
           )}
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between border-t pt-4">
             <button
               type="button"
-              onClick={() => onDelete?.(form)}
+              onClick={() => onDelete?.(product)}
               className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
             >
               Eliminar Producto
@@ -405,8 +285,7 @@ export default function ProductEditModal({ product, onClose, onSave, onDelete })
               </button>
               <button
                 type="submit"
-                onClick={handleSubmit}
-                className="rounded-lg bg-[#1E3763] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16294a]"
+                className="rounded-lg bg-[#1F3B67] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16294A]"
               >
                 Guardar
               </button>
@@ -415,16 +294,21 @@ export default function ProductEditModal({ product, onClose, onSave, onDelete })
         </form>
       </div>
 
-      {/* MODAL DE COLORES */}
+      <datalist id="admin-color-options">
+        {colorOptions.map((option) => (
+          <option key={option.label} value={option.label} />
+        ))}
+      </datalist>
+
       <ColorPickerModal
-        isOpen={!!colorModalRowId}
-        initialHex={stockItems.find((i) => i.id === colorModalRowId)?.hex || "#1E3763"}
+        isOpen={Boolean(colorPickerRow)}
+        initialHex={ensureHex(variants.find((variant) => variant.key === colorPickerRow)?.hex)}
         initialOpacity={1}
-        onCancel={() => setColorModalRowId(null)}
-        onApply={(hex /*, opacity */) => {
-          if (!colorModalRowId) return;
-          applyHexToRow(colorModalRowId, hex);
-          setColorModalRowId(null);
+        onCancel={() => setColorPickerRow(null)}
+        onApply={(hex) => {
+          if (!colorPickerRow) return;
+          updateVariant(colorPickerRow, { hex: ensureHex(hex) });
+          setColorPickerRow(null);
         }}
       />
     </div>

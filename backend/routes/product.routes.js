@@ -1,11 +1,18 @@
-import { Router } from 'express';
-import { getProductsController , getProductByIdController} from '../controllers/product.controller.js';
+﻿import { Router } from 'express';
+import {
+  getProductsController,
+  getProductByIdController,
+  listColorsController,
+  updateProductController,
+  deleteProductController,
+} from '../controllers/product.controller.js';
 
 const router = Router();
 
-// Cuando llegue una petición GET a '/', la manejará getProductsController
 router.get('/', getProductsController);
-
+router.get('/colors', listColorsController);
 router.get('/:id', getProductByIdController);
+router.put('/:id', updateProductController);
+router.delete('/:id', deleteProductController);
 
 export default router;

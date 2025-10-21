@@ -1,294 +1,382 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import ProductCard from '../components/layout/ProductCard'; // Asegúrate que la ruta sea correcta
-import ProductEditModal from '../components/admin/ProductEditModal'; // Asumo que tienes este componente
-import { ProductsAPI } from '../services/api'; // Asegúrate que la ruta sea correcta
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
+import ProductCard from "../components/layout/ProductCard";
+import ProductEditModal from "../components/admin/ProductEditModal";
+import { ProductsAPI } from "../services/api";
 
-// Mantené la lista de categorías consistente con la API si es posible, o usa los datos de la API
-const categories = [
-  { name: "ROPA", slug: "nuestros-basicos" }, // Asumiendo que ambos mapean a ROPA
-  { name: "ROPA", slug: "bestsellers" },
-  { name: "ACCESORIO", slug: "accesorios" },
-  { name: "LIBRERIA", slug: "libreria" },
-];
+const normalizeHex = (hex) => {
+  if (!hex) return null;
+  const sanitized = hex.toString().trim();
+  return sanitized.startsWith("#") ? sanitized : `#${sanitized}`;
+};
+
+const mapProductFromApi = (data) => {
+  const variants = (data.Stock ?? []).map((stock) => {
+    const colorHex = normalizeHex(stock.Color?.hexa ?? stock.Color?.hex ?? "#1F3B67");
+    const availableUnits = Number(stock.stock ?? 0);
+    return {
+      stockId: stock.id,
+      colorName: stock.Color?.nombre ?? "",
+      colorHex: colorHex ?? "#1F3B67",
+      size: stock.talle ?? "",
+      available: availableUnits > 0,
+      availableUnits,
+    };
+  });
+
+  const defaultVariant = variants.find((variant) => variant.available) ?? variants[0] ?? null;
+
+  return {
+    id: data.id,
+    name: data.Titulo ?? "",
+    price: Number(data.precio ?? 0),
+    description: data.descripcion ?? "",
+    category: data.categoria ?? "",
+    image: data.Imagen?.[0]?.imagen ?? null,
+    variants,
+    defaultVariant,
+    stockItems: variants.map((variant) => ({
+      id: variant.stockId,
+      color: variant.colorName,
+      hex: variant.colorHex,
+      size: variant.size,
+      stock: variant.availableUnits,
+    })),
+  };
+};
+
+const initialFilters = {
+  category: null,
+  sizes: [],
+  colors: [],
+  inStockOnly: false,
+  maxPrice: 0,
+  query: "",
+};
 
 const Admin = () => {
-  // --- ESTADOS ---
   const [allProducts, setAllProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [filters, setFilters] = useState({
-    category: null,
-    sizes: [],
-    colors: [],
-    inStockOnly: false,
-    maxPrice: 1000, // Empezar con un precio máximo alto
-    query: '',
-  });
+  const [filters, setFilters] = useState(initialFilters);
+  const [priceCeiling, setPriceCeiling] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [colorsCatalog, setColorsCatalog] = useState([]);
 
-  // --- EFECTO: CARGA INICIAL DE DATOS ---
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const data = await ProductsAPI.list();
-        setAllProducts(data);
-        // Ajustar precio máximo inicial si hay productos
-        if (data && data.length > 0) {
-          const maxInitialPrice = Math.max(...data.map(p => p.precio), 0); // Agregamos 0 por si acaso
-          setFilters(prev => ({ ...prev, maxPrice: maxInitialPrice }));
-        }
+        const [productsResponse, colorsResponse] = await Promise.all([
+          ProductsAPI.list(),
+          ProductsAPI.colors().catch(() => []),
+        ]);
+
+        const mappedProducts = (productsResponse ?? []).map(mapProductFromApi);
+        setAllProducts(mappedProducts);
+
+        const maxPrice = mappedProducts.length
+          ? Math.max(...mappedProducts.map((product) => product.price))
+          : 0;
+        setPriceCeiling(maxPrice);
+        setFilters((prev) => ({ ...prev, maxPrice: maxPrice || 0 }));
+
+        setColorsCatalog(colorsResponse ?? []);
+        setError(null);
       } catch (err) {
-        setError(err.message);
+        console.error(err);
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+
+    fetchData();
   }, []);
 
-  // --- EFECTO: SINCRONIZAR FILTROS CON URL ---
-  useEffect(() => {
-    const q = searchParams.get('q') || '';
-    const categorySlugFromURL = searchParams.get('categoria');
-    // Traducir slug a nombre de categoría (case-insensitive find)
-    const foundCategory = categories.find(cat => cat.slug.toLowerCase() === categorySlugFromURL?.toLowerCase());
-    setFilters((prev) => ({
-      ...prev,
-      query: q,
-      // Usamos el NOMBRE de la categoría para el estado interno
-      category: foundCategory ? foundCategory.name : null
-    }));
-  }, [searchParams]);
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter((product) => {
+      if (filters.category && product.category !== filters.category) {
+        return false;
+      }
 
-  // --- EFECTO: MOTOR DE FILTRADO (CORREGIDO) ---
-  useEffect(() => {
-    let products = [...allProducts];
+      if (
+        filters.sizes.length > 0 &&
+        !product.variants.some(
+          (variant) => variant.size && filters.sizes.includes(variant.size)
+        )
+      ) {
+        return false;
+      }
 
-    // Filtro de Categoría (Case-insensitive)
-    if (filters.category) {
-      products = products.filter((p) =>
-        p.categoria?.toLowerCase() === filters.category.toLowerCase()
-      );
-    }
-    // Filtro de Talle (usando Stock)
-    if (filters.sizes.length > 0) {
-      products = products.filter((p) =>
-        p.Stock?.some(stockItem => filters.sizes.includes(stockItem.talle))
-      );
-    }
-    // Filtro de Color (usando Stock y Color anidado)
-    if (filters.colors.length > 0) {
-      products = products.filter((p) =>
-        p.Stock?.some(stockItem => stockItem.Color && filters.colors.includes(stockItem.Color.nombre))
-      );
-    }
-    // Filtro de Stock Disponible (usando Stock)
-    if (filters.inStockOnly) {
-      products = products.filter((p) =>
-        p.Stock?.some(stockItem => stockItem.stock > 0)
-      );
-    }
-    // Filtro de Precio
-    products = products.filter((p) => p.precio <= filters.maxPrice);
+      if (
+        filters.colors.length > 0 &&
+        !product.variants.some(
+          (variant) =>
+            variant.colorName && filters.colors.includes(variant.colorName)
+        )
+      ) {
+        return false;
+      }
 
-    // Filtro de Búsqueda (usando Titulo y categoria)
-    if (filters.query && filters.query.trim()) {
-      const term = filters.query.toLowerCase();
-      products = products.filter((p) => {
-        const fields = [p.Titulo, p.categoria] // Usar Titulo y categoria
+      if (filters.inStockOnly && !product.variants.some((variant) => variant.available)) {
+        return false;
+      }
+
+      if (filters.maxPrice && product.price > filters.maxPrice) {
+        return false;
+      }
+
+      if (filters.query && filters.query.trim()) {
+        const term = filters.query.trim().toLowerCase();
+        const haystack = [product.name, product.category, product.description]
           .filter(Boolean)
-          .join(' ')
+          .join(" ")
           .toLowerCase();
-        return fields.includes(term);
-      });
-    }
+        if (!haystack.includes(term)) {
+          return false;
+        }
+      }
 
-    setFilteredProducts(products);
-  }, [filters, allProducts]);
+      return true;
+    });
+  }, [allProducts, filters]);
 
-  // --- CÁLCULO DE OPCIONES DINÁMICAS (CORREGIDO) ---
   const availableOptions = useMemo(() => {
-    // Usamos allProducts para calcular opciones, no filteredProducts
     const relevantProducts = filters.category
-      ? allProducts.filter((p) => p.categoria?.toLowerCase() === filters.category.toLowerCase())
+      ? allProducts.filter((product) => product.category === filters.category)
       : allProducts;
 
-    // Extraer talles únicos del array Stock
-    const sizes = new Set(
-      relevantProducts.flatMap(p => p.Stock?.map(s => s.talle) ?? []).filter(Boolean)
-    );
-    // Extraer colores únicos del array Stock (nombre del color)
-    const colors = new Set(
-      relevantProducts.flatMap(p => p.Stock?.map(s => s.Color?.nombre) ?? []).filter(Boolean)
-    );
-    // Extraer categorías únicas de allProducts
-    const categories = new Set(allProducts.map((p) => p.categoria).filter(Boolean));
+    const sizeSet = new Set();
+    const colorSet = new Set();
+
+    relevantProducts.forEach((product) => {
+      product.variants.forEach((variant) => {
+        if (variant.size) sizeSet.add(variant.size);
+        if (variant.colorName) colorSet.add(variant.colorName);
+      });
+    });
+
+    const categories = Array.from(
+      new Set(allProducts.map((product) => product.category).filter(Boolean))
+    ).sort();
 
     return {
-      sizes: Array.from(sizes).sort(),
-      colors: Array.from(colors).sort(),
-      // Devolvemos las categorías en el formato de la API (MAYÚSCULAS)
-      categories: Array.from(categories).sort(),
+      sizes: Array.from(sizeSet).sort(),
+      colors: Array.from(colorSet).sort(),
+      categories,
     };
   }, [allProducts, filters.category]);
 
-  // --- MANEJADORES DE EVENTOS (handleCategoryChange CORREGIDO) ---
-  const handleCategoryChange = (categoryName) => { // Recibe el nombre (ej: "ROPA")
-    const isActive = filters.category?.toLowerCase() === categoryName.toLowerCase();
-    const newCategoryName = isActive ? null : categoryName;
-
-    setFilters((prev) => ({ ...prev, category: newCategoryName }));
-
-    // Buscamos el slug correspondiente para poner en la URL
-    if (newCategoryName) {
-      const foundCategory = categories.find(cat => cat.name.toLowerCase() === newCategoryName.toLowerCase());
-      if (foundCategory) {
-        searchParams.set('categoria', foundCategory.slug);
-      } else {
-         searchParams.delete('categoria'); // Si no se encuentra slug, limpiar URL
-      }
-    } else {
-      searchParams.delete('categoria');
-    }
-    setSearchParams(searchParams);
+  const handleCategoryChange = (category) => {
+    setFilters((prev) => ({
+      ...prev,
+      category: prev.category === category ? null : category,
+    }));
   };
 
-  // Otros manejadores (sin cambios mayores, asumiendo que funcionan)
-   const handleCheckboxChange = (filterType, value) => {
-    setFilters(prev => {
-      const currentValues = prev[filterType];
-      const newValues = currentValues.includes(value)
-        ? currentValues.filter(item => item !== value)
-        : [...currentValues, value];
-      return { ...prev, [filterType]: newValues };
+  const handleCheckboxChange = (type, value) => {
+    setFilters((prev) => {
+      const current = prev[type];
+      const exists = current.includes(value);
+      const next = exists ? current.filter((item) => item !== value) : [...current, value];
+      return { ...prev, [type]: next };
     });
   };
-   const handleStockChange = (e) => {
-    setFilters(prev => ({ ...prev, inStockOnly: e.target.checked }));
-  };
-   const handlePriceChange = (e) => {
-    setFilters(prev => ({ ...prev, maxPrice: Number(e.target.value) }));
-  };
-   const clearFilters = () => {
-    // Resetear al maxPrice inicial calculado
-    const maxInitialPrice = allProducts.length > 0 ? Math.max(...allProducts.map(p => p.precio), 0) : 1000;
-    setFilters({ category: null, sizes: [], colors: [], inStockOnly: false, maxPrice: maxInitialPrice, query: '' });
-    setSearchParams({});
+
+  const handleStockChange = (event) => {
+    setFilters((prev) => ({ ...prev, inStockOnly: event.target.checked }));
   };
 
-   // Funciones para el modal de edición (asumiendo que existen y funcionan)
+  const handlePriceChange = (event) => {
+    setFilters((prev) => ({ ...prev, maxPrice: Number(event.target.value) }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ ...initialFilters, maxPrice: priceCeiling });
+  };
+
   const openEditor = (product) => setEditingProduct(product);
   const closeEditor = () => setEditingProduct(null);
-  const handleSaveProduct = (updatedProduct) => { /* Tu lógica de guardado */ closeEditor(); };
-  const handleDeleteProduct = (productToDelete) => { /* Tu lógica de borrado */ closeEditor(); };
 
-  // --- RENDERIZADO ---
-  if (loading) return <div className="text-center py-16">Cargando productos...</div>;
-  if (error) return <div className="text-center py-16 text-red-500">Error: {error}</div>;
+  const handleSaveProduct = async (payload) => {
+    if (!editingProduct) return;
+    try {
+      const response = await ProductsAPI.update(editingProduct.id, payload);
+      const mapped = mapProductFromApi(response);
+      setAllProducts((prev) =>
+        prev.map((product) => (product.id === mapped.id ? mapped : product))
+      );
+      toast.success("Producto actualizado correctamente");
+      closeEditor();
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al actualizar el producto");
+    }
+  };
+
+  const handleDeleteProduct = async (productToDelete) => {
+    if (!productToDelete) return;
+    try {
+      await ProductsAPI.delete(productToDelete.id);
+      setAllProducts((prev) => prev.filter((product) => product.id !== productToDelete.id));
+      toast.success("Producto eliminado");
+      closeEditor();
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al eliminar el producto");
+    }
+  };
+
+  if (loading) {
+    return <div className="py-16 text-center">Cargando productos...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="py-16 text-center text-red-500">
+        Error al cargar los productos. Intenta nuevamente.
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 mb-4">Administración</h1>
-        <p className="text-gray-600 mb-8">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-gray-900">
+          Administración
+        </h1>
+        <p className="mb-8 text-gray-600">
           Mostrando {filteredProducts.length} de {allProducts.length} productos.
         </p>
 
-        <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
-          {/* Columna de Filtros */}
-          <aside className="w-full md:w-64 lg:w-72 flex-shrink-0">
+        <div className="flex flex-col gap-8 md:flex-row lg:gap-12">
+          <aside className="w-full flex-shrink-0 md:w-64 lg:w-72">
             <div className="sticky top-8">
-              {/* Encabezado Filtros */}
-              <div className="flex justify-between items-center mb-4">
+              <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Filtros</h2>
-                <button onClick={clearFilters} className="text-sm font-medium text-blue-600 hover:text-blue-800">Limpiar</button>
+                <button
+                  onClick={clearFilters}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                >
+                  Limpiar
+                </button>
               </div>
-              {/* Contenido Filtros */}
+
               <div className="space-y-6 border-t pt-6">
-                {/* Filtro Categoría (CORREGIDO: Comparación case-insensitive para estilo) */}
                 <div>
-                  <h3 className="font-semibold mb-2">Categoría</h3>
+                  <h3 className="mb-2 font-semibold">Categoría</h3>
                   <div className="space-y-1">
-                    {availableOptions.categories.map(cat => (
-                      <button key={cat} onClick={() => handleCategoryChange(cat)}
-                        className={`block w-full text-left px-2 py-1 rounded ${
-                          // Comparación case-insensitive para el estilo
-                          filters.category?.toLowerCase() === cat.toLowerCase() ? 'bg-blue-100 font-semibold' : ''
-                        }`}>
-                        {cat}
+                    {availableOptions.categories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => handleCategoryChange(category)}
+                        className={`block w-full rounded px-2 py-1 text-left ${
+                          filters.category === category ? "bg-blue-100 font-semibold" : ""
+                        }`}
+                      >
+                        {category}
                       </button>
                     ))}
                   </div>
                 </div>
-                {/* Otros filtros (Disponibilidad, Precio, Talle, Color - sin cambios visuales mayores) */}
-                 <div>
-                   <h3 className="font-semibold mb-2">Disponibilidad</h3>
-                   <label className="flex items-center gap-2">
-                     <input type="checkbox" checked={filters.inStockOnly} onChange={handleStockChange} className="rounded" />
-                     En Stock
-                   </label>
-                 </div>
-                 <div>
-                   <h3 className="font-semibold mb-2">Precio</h3>
-                   <input type="range" min="0" max={Math.max(...allProducts.map(p => p.precio), 1000)} value={filters.maxPrice} onChange={handlePriceChange} className="w-full" />
-                   <div className="text-sm text-gray-600 text-center">Hasta ${filters.maxPrice}</div>
-                 </div>
-                 {availableOptions.sizes.length > 0 && (
-                   <div>
-                     <h3 className="font-semibold mb-2">Talle</h3>
-                     <div className="space-y-1">
-                       {availableOptions.sizes.map(size => (
-                         <label key={size} className="flex items-center gap-2">
-                           <input type="checkbox" value={size} checked={filters.sizes.includes(size)} onChange={() => handleCheckboxChange('sizes', size)} className="rounded" />
-                           {size}
-                         </label>
-                       ))}
-                     </div>
-                   </div>
-                 )}
-                 {availableOptions.colors.length > 0 && (
-                   <div>
-                     <h3 className="font-semibold mb-2">Color</h3>
-                     <div className="space-y-1">
-                       {availableOptions.colors.map(color => (
-                         <label key={color} className="flex items-center gap-2">
-                           <input type="checkbox" value={color} checked={filters.colors.includes(color)} onChange={() => handleCheckboxChange('colors', color)} className="rounded" />
-                           {color} {/* Mostramos el nombre del color */}
-                         </label>
-                       ))}
-                     </div>
-                   </div>
-                 )}
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Disponibilidad</h3>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.inStockOnly}
+                      onChange={handleStockChange}
+                      className="rounded"
+                    />
+                    En stock
+                  </label>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Precio</h3>
+                  <input
+                    type="range"
+                    min={0}
+                    max={priceCeiling || 0}
+                    value={filters.maxPrice || 0}
+                    onChange={handlePriceChange}
+                    className="w-full"
+                    disabled={!priceCeiling}
+                  />
+                  <div className="text-center text-sm text-gray-600">
+                    Hasta ${Number(filters.maxPrice || 0).toFixed(2)}
+                  </div>
+                </div>
+
+                {availableOptions.sizes.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-semibold">Talle</h3>
+                    <div className="space-y-1">
+                      {availableOptions.sizes.map((size) => (
+                        <label key={size} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.sizes.includes(size)}
+                            onChange={() => handleCheckboxChange("sizes", size)}
+                            className="rounded"
+                          />
+                          {size}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {availableOptions.colors.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 font-semibold">Color</h3>
+                    <div className="space-y-1">
+                      {availableOptions.colors.map((color) => (
+                        <label key={color} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.colors.includes(color)}
+                            onChange={() => handleCheckboxChange("colors", color)}
+                            className="rounded"
+                          />
+                          {color}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </aside>
 
-          {/* Columna de Productos */}
           <main className="flex-1">
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map(product => (
-                  // Pasamos la función openEditor al ProductCard
-                  <ProductCard key={product.id} product={product} variant={"admin"} onEdit={() => openEditor(product)} />
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="admin"
+                    onEdit={() => openEditor(product)}
+                  />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
+              <div className="py-16 text-center">
                 <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-                <p className="text-gray-600 mt-2">Intenta ajustar tus filtros o limpiarlos.</p>
+                <p className="mt-2 text-gray-600">Ajusta los filtros para ver otros resultados.</p>
               </div>
             )}
           </main>
         </div>
       </div>
 
-      {/* Modal de Edición */}
       <ProductEditModal
         product={editingProduct}
+        colorsCatalog={colorsCatalog}
         onClose={closeEditor}
         onSave={handleSaveProduct}
         onDelete={handleDeleteProduct}

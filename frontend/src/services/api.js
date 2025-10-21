@@ -22,6 +22,16 @@ export const ProductsAPI = {
     return http(`/products${qs ? `?${qs}` : ""}`);
   },
   get: (id) => http(`/products/${id}`),
+  update: (id, payload) =>
+    http(`/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  delete: (id) =>
+    http(`/products/${id}`, {
+      method: "DELETE",
+    }),
+  colors: () => http("/products/colors"),
 };
 
 // Órdenes (lo que otros consumen de nosotros)

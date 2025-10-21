@@ -4,6 +4,12 @@ import ProductCard from "../components/layout/ProductCard";
 import { ProductsAPI } from "../services/api";
 import { resolveCategory, categoryToSlug } from "../data/products";
 
+const ensureHex = (value) => {
+  if (!value) return null;
+  const sanitized = value.toString().trim();
+  return sanitized.startsWith("#") ? sanitized : `#${sanitized}`;
+};
+
 const normalizeProduct = (product) => {
   const variants = (product.Stock ?? []).map((stock) => ({
     stockId: stock.id,
@@ -12,7 +18,7 @@ const normalizeProduct = (product) => {
     availableUnits: stock.stock ?? 0,
     colorId: stock.Color?.id ?? null,
     colorName: stock.Color?.nombre ?? null,
-    colorHex: stock.Color?.hexa ?? null,
+    colorHex: ensureHex(stock.Color?.hexa ?? stock.Color?.hex ?? null),
   }));
 
   const firstImage = product.Imagen?.[0]?.imagen ?? null;

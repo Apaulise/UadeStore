@@ -60,6 +60,64 @@ const ensureHex = (value) => {
   return value.startsWith("#") ? value : `#${value}`;
 };
 
+const SIZE_GUIDE_HEADERS = ["Medida", "XS", "S", "M", "L", "XL"];
+const SIZE_GUIDE_ROWS = [
+  { label: "Cintura", values: ["60", "65", "70", "75", "80"] },
+  { label: "Torso", values: ["85", "90", "95", "100", "105"] },
+  { label: "Largo de Piernas", values: ["100", "105", "110", "115", "120"] },
+  { label: "Largo de Brazos", values: ["47", "50", "55", "60", "65"] },
+  { label: "Cadera", values: ["90", "95", "100", "105", "110"] },
+  { label: "Pecho", values: ["85", "90", "95", "100", "105"] },
+];
+
+const SizeGuideModal = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-xl rounded-3xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <h2 className="text-lg font-semibold text-brand-text">Tabla de Medidas de Talles</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100"
+            aria-label="Cerrar tabla de talles"
+          >
+            ×
+          </button>
+        </div>
+        <div className="px-6 py-4">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm text-brand-text">
+              <thead>
+                <tr className="bg-[#E9EDF7] text-center text-xs font-semibold uppercase text-brand-blue">
+                  {SIZE_GUIDE_HEADERS.map((header) => (
+                    <th key={header} className="border border-[#C5D1E8] px-3 py-2">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {SIZE_GUIDE_ROWS.map((row) => (
+                  <tr key={row.label} className="text-center">
+                    <th className="border border-[#E1E7F2] px-3 py-2 text-left font-semibold">{row.label}</th>
+                    {row.values.map((value, index) => (
+                      <td key={`${row.label}-${index}`} className="border border-[#E1E7F2] px-3 py-2">
+                        {value}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -73,6 +131,7 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -329,6 +388,7 @@ const ProductDetail = () => {
                   <p className="text-sm font-semibold text-brand-text">Talle:</p>
                   <button
                     type="button"
+                    onClick={() => setIsSizeGuideOpen(true)}
                     className="text-sm font-medium text-brand-blue underline-offset-2 hover:underline"
                   >
                     Tabla de talles
@@ -439,6 +499,8 @@ const ProductDetail = () => {
           </Link>
         </div>
       </div>
+
+      <SizeGuideModal open={isSizeGuideOpen} onClose={() => setIsSizeGuideOpen(false)} />
     </div>
   );
 };

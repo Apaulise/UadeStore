@@ -62,14 +62,16 @@ const Admin = () => {
   const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [colorsCatalog, setColorsCatalog] = useState([]);
+  const [sizesCatalog, setSizesCatalog] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [productsResponse, colorsResponse] = await Promise.all([
+        const [productsResponse, colorsResponse, sizesResponse] = await Promise.all([
           ProductsAPI.list(),
           ProductsAPI.colors().catch(() => []),
+          ProductsAPI.sizes().catch(() => []),
         ]);
 
         const mappedProducts = (productsResponse ?? []).map(mapProductFromApi);
@@ -82,6 +84,7 @@ const Admin = () => {
         setFilters((prev) => ({ ...prev, maxPrice: maxPrice || 0 }));
 
         setColorsCatalog(colorsResponse ?? []);
+        setSizesCatalog(sizesResponse ?? []);
         setError(null);
       } catch (err) {
         console.error(err);
@@ -377,6 +380,7 @@ const Admin = () => {
       <ProductEditModal
         product={editingProduct}
         colorsCatalog={colorsCatalog}
+        sizesCatalog={sizesCatalog}
         onClose={closeEditor}
         onSave={handleSaveProduct}
         onDelete={handleDeleteProduct}

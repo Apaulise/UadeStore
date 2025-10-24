@@ -33,6 +33,17 @@ export const listColorsController = async (_req, res) => {
   }
 };
 
+export const listSizesController = async (_req, res) => {
+  try {
+    const sizes = await productService.listSizes();
+    res.status(200).json(sizes);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Error al obtener los talles', error: error.message });
+  }
+};
+
 export const updateProductController = async (req, res) => {
   try {
     const { id } = req.params;

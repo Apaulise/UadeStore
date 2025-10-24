@@ -32,6 +32,7 @@ export const ProductsAPI = {
       method: "DELETE",
     }),
   colors: () => http("/products/colors"),
+  sizes: () => http("/products/sizes"),
 };
 
 // Órdenes (lo que otros consumen de nosotros)

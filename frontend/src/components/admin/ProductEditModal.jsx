@@ -46,7 +46,7 @@ const formatColorOption = (color) => ({
   hex: ensureHex(color.hexa ?? color.hex ?? "#1F3B67"),
 });
 
-export default function ProductEditModal({ product, colorsCatalog = [], onClose, onSave, onDelete }) {
+export default function ProductEditModal({ product, colorsCatalog = [], sizesCatalog = [], onClose, onSave, onDelete }) {
   const colorOptions = useMemo(() => {
     const list = colorsCatalog.length ? colorsCatalog.map(formatColorOption) : DEFAULT_COLORS;
     const unique = new Map();
@@ -123,8 +123,8 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-3xl rounded-3xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-6 py-4">
+      <div className="w-full max-w-3xl rounded-3xl bg-white shadow-xl max-h-[85vh] flex flex-col">
+        <div className="flex items-center justify-between border-b px-6 py-4 flex-none">
           <div className="flex gap-2">
             {tabs.map((tab) => (
               <button
@@ -151,7 +151,8 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
           {activeTab === "details" ? (
             <div className="space-y-4">
               <div>
@@ -208,11 +209,10 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
                         className="h-8 w-8 rounded-full border"
                         style={{ backgroundColor: variant.hex }}
                         aria-label="Cambiar color"
+                        title="Cambiar color manualmente"
                       />
-                      <input
-                        type="text"
-                        list="admin-color-options"
-                        value={variant.colorName}
+                      <select
+                        value={variant.colorName || ""}
                         onChange={(event) => {
                           const value = event.target.value;
                           const option = colorOptions.find(
@@ -223,18 +223,29 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
                             hex: option ? option.hex : variant.hex,
                           });
                         }}
-                        placeholder="Color"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                      />
+                      >
+                        <option value="">Color</option>
+                        {colorOptions.map((option) => (
+                          <option key={option.label} value={option.label}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <input
-                      type="text"
-                      value={variant.size}
+                    <select
+                      value={variant.size || ""}
                       onChange={(event) => updateVariant(variant.key, { size: event.target.value })}
-                      placeholder="Talle"
                       className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                    />
+                    >
+                      <option value="">Talle</option>
+                      {sizesCatalog.map((sz) => (
+                        <option key={sz} value={sz}>
+                          {sz}
+                        </option>
+                      ))}
+                    </select>
 
                     <input
                       type="number"
@@ -266,8 +277,9 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
               </button>
             </div>
           )}
+          </div>
 
-          <div className="flex items-center justify-between border-t pt-4">
+          <div className="flex items-center justify-between border-t px-6 py-4 bg-white flex-none">
             <button
               type="button"
               onClick={() => onDelete?.(product)}
@@ -293,12 +305,6 @@ export default function ProductEditModal({ product, colorsCatalog = [], onClose,
           </div>
         </form>
       </div>
-
-      <datalist id="admin-color-options">
-        {colorOptions.map((option) => (
-          <option key={option.label} value={option.label} />
-        ))}
-      </datalist>
 
       <ColorPickerModal
         isOpen={Boolean(colorPickerRow)}

@@ -80,6 +80,20 @@ export const listColors = async () => {
   return data ?? [];
 };
 
+export const listSizes = async () => {
+  // Obtiene los valores existentes en la columna enum `talle` de Stock
+  const { data, error } = await supabase
+    .from('Stock')
+    .select('talle')
+    .not('talle', 'is', null);
+
+  if (error) throw new Error(error.message);
+
+  const sizes = Array.from(new Set((data ?? []).map((row) => row.talle))).filter(Boolean);
+  sizes.sort((a, b) => `${a}`.localeCompare(`${b}`, 'es', { numeric: true }));
+  return sizes;
+};
+
 export const updateArticulo = async (productId, { name, price, description }) => {
   const payload = {};
   if (name !== undefined) payload.Titulo = name;
@@ -100,12 +114,13 @@ export const updateArticulo = async (productId, { name, price, description }) =>
 const syncProductStock = async (productId, variants = []) => {
   const { data: existing, error: existingError } = await supabase
     .from('Stock')
-    .select('id')
+    .select('id, color_id, talle')
     .eq('articulo_id', productId);
 
   if (existingError) throw new Error(existingError.message);
 
-  const existingIds = new Set((existing ?? []).map((item) => item.id));
+  const existingRows = existing ?? [];
+  const existingIds = new Set(existingRows.map((item) => item.id));
   const keepIds = new Set();
 
   const { data: colors, error: colorsError } = await supabase
@@ -115,6 +130,10 @@ const syncProductStock = async (productId, variants = []) => {
   if (colorsError) throw new Error(colorsError.message);
 
   const colorsCache = [...(colors ?? [])];
+  // Mapa de combinaciones existentes color_id+talle -> id para evitar colisiones durante esta sincronización
+  const comboToId = new Map(
+    existingRows.map((row) => [`${row.color_id ?? 'null'}::${row.talle ?? ''}`, row.id]),
+  );
 
   for (const variant of variants) {
     const stockId = variant.id ? Number(variant.id) : null;
@@ -129,7 +148,39 @@ const syncProductStock = async (productId, variants = []) => {
       colorsCache
     );
 
+    // Detecta si ya existe una fila con la misma combinación
+    const comboKey = `${colorId ?? 'null'}::${size ?? ''}`;
+    const existingSameComboId = comboToId.get(comboKey) ?? null;
+    const existingSameCombo = existingSameComboId
+      ? { id: existingSameComboId }
+      : null;
+
+    if (existingSameCombo) {
+      // Si existe y es distinto al que estamos editando, actualizamos el existente
+      // y marcamos para conservar ese id, evitando violar la PK compuesta.
+      const targetId = existingSameCombo.id;
+      const { error: updateError } = await supabase
+        .from('Stock')
+        .update({ stock: safeStock })
+        .eq('id', targetId)
+        .eq('articulo_id', productId);
+      if (updateError) throw new Error(updateError.message);
+      keepIds.add(targetId);
+      comboToId.set(comboKey, targetId);
+
+      // Si teníamos otro id distinto para esta variante, lo eliminaremos al final
+      if (stockId && stockId !== targetId) {
+        // marcará eliminación por no estar en keepIds
+      }
+      continue;
+    }
+
     if (stockId) {
+      // Si el registro cambia de combinación, actualizamos el mapa
+      const prev = existingRows.find((row) => row.id === stockId);
+      if (prev) {
+        comboToId.delete(`${prev.color_id ?? 'null'}::${prev.talle ?? ''}`);
+      }
       const { error: updateError } = await supabase
         .from('Stock')
         .update({
@@ -142,6 +193,7 @@ const syncProductStock = async (productId, variants = []) => {
 
       if (updateError) throw new Error(updateError.message);
       keepIds.add(stockId);
+      comboToId.set(comboKey, stockId);
     } else {
       const { data: inserted, error: insertError } = await supabase
         .from('Stock')
@@ -156,6 +208,7 @@ const syncProductStock = async (productId, variants = []) => {
 
       if (insertError) throw new Error(insertError.message);
       keepIds.add(inserted.id);
+      comboToId.set(comboKey, inserted.id);
     }
   }
 

@@ -53,29 +53,26 @@ export const getPurchaseHistory = async (userId) => {
 
   // 1. Obtener las compras y todos sus items anidados
   const { data, error } = await supabase
-    .from('purchases')
+    .from('Compra')
     // --- CONSULTA MODIFICADA ---
     // Pedimos campos de 'purchases' y anidamos el resto
-    .select(
-      id,
-      created_at,
-      total,
-      item_compra (
-        id,
-        cantidad,
-        subtotal, 
-        stock (
-          articulo (
-            titulo,
-            imagen,
-            descripcion,
-            talle,
-            color
-          )
+    .select(`
+    *, 
+    Item_compra (
+      *, 
+      Stock (
+        stock, 
+        talle, 
+        Color ( nombre, hexa ), 
+        Articulo ( 
+          Titulo, 
+          descripcion, 
+          Imagen ( imagen ) 
         )
       )
     )
-    .eq('user_id', userId) 
+  `)
+    .eq('usuario_id', userId) 
     .order('created_at', { ascending: false });
 
   // 2. Manejar error

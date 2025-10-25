@@ -2,6 +2,7 @@ import { supabase } from './supabase.service.js';
 import { publishPurchaseEvent } from './rabbitmq.service.js';
 
 export const createNewPurchase = async (purchaseData) => {
+  console.log("info de ordennn", purchaseData)
   const { userId, items, total } = purchaseData;
 
   // --- Insertar la Compra Principal ---

@@ -6,6 +6,7 @@ import * as purchaseService from '../services/purchase.service.js';
     const purchaseData = req.body;
     // Asume que obtienes userId de alguna forma (ej: autenticación, o viene en el body)
     // Para simplificar, lo tomamos del body por ahora
+    console.log("info de orden controller", purchaseData)
     if (!purchaseData.userId) {
         return res.status(400).json({ message: 'userId es requerido'});
     }

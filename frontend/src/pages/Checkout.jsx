@@ -65,7 +65,7 @@ const Checkout = () => {
       total: total,
     };
 
-    console.info('Enviando orden a la API:', orderPayload);
+    console.info('Enviando orden a la APIIIII:', orderPayload);
 
     try {
       // --- LLAMADA REAL A LA API ---

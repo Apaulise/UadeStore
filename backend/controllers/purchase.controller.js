@@ -7,11 +7,11 @@ import * as purchaseService from '../services/purchase.service.js';
     // Asume que obtienes userId de alguna forma (ej: autenticación, o viene en el body)
     // Para simplificar, lo tomamos del body por ahora
     console.log("info de orden controller", purchaseData)
-    if (!purchaseData.userId) {
+   /* if (!purchaseData.userId) {
         return res.status(400).json({ message: 'userId es requerido'});
-    }
+    }*/
 
-    const newOrder = await purchaseService.createOrder(purchaseData);
+    const newOrder = await purchaseService.createNewPurchase(purchaseData);
     res.status(201).json({ message: 'Orden creada con éxito', data: newOrder });
   } catch (error) {
     console.error("Error en createOrderController:", error);

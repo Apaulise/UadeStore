@@ -18,3 +18,16 @@ import * as purchaseService from '../services/purchase.service.js';
     res.status(500).json({ message: 'Error al procesar la orden', error: error.message });
   }
 };
+
+export const getPurchaseHistoryController = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ message: 'El parámetro "userId" es requerido.' });
+    }
+    const historyData = await purchaseService.getPurchaseHistory(userId);
+    res.status(200).json(historyData);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener el historial de compras', error: error.message });
+  }
+};

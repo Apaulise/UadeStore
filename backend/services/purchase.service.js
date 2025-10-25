@@ -9,7 +9,7 @@ export const createNewPurchase = async (purchaseData) => {
   const { data: compra, error: compraError } = await supabase
     .from('Compra')
     .insert({
-      usuario_id: userId, 
+      usuario_id: 1, 
       total_compra: total,
     })
     .select() 
@@ -17,7 +17,7 @@ export const createNewPurchase = async (purchaseData) => {
 
   if (compraError) {
     console.error("Error creando Compra:", compraError);
-    throw new Error('Error al crear la orden principal.');
+    throw new Error('Error al crear la orden principal.',compraError);
   }
 
   const compraId = compra.id;
@@ -45,4 +45,45 @@ export const createNewPurchase = async (purchaseData) => {
   // --- Fin Futuro Paso ---
 
   return { ...compra, items: itemsToInsert };
+};
+
+// Nueva función para obtener el historial de compras de un usuario
+export const getPurchaseHistory = async (userId) => {
+  if (!userId) throw new Error('El ID de usuario es requerido.');
+
+  // 1. Obtener las compras y todos sus items anidados
+  const { data, error } = await supabase
+    .from('purchases')
+    // --- CONSULTA MODIFICADA ---
+    // Pedimos campos de 'purchases' y anidamos el resto
+    .select(
+      id,
+      created_at,
+      total,
+      item_compra (
+        id,
+        cantidad,
+        subtotal, 
+        stock (
+          articulo (
+            titulo,
+            imagen,
+            descripcion,
+            talle,
+            color
+          )
+        )
+      )
+    )
+    .eq('user_id', userId) 
+    .order('created_at', { ascending: false });
+
+  // 2. Manejar error
+  if (error) {
+    console.error('Error fetching purchase history:', error.message);
+    throw new Error(error.message);
+  }
+
+  // 3. Devolver los datos anidados
+  return data;
 };

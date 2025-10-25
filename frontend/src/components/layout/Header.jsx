@@ -83,33 +83,50 @@ const Header = () => {
   const toggleSearch = () => setIsSearchOpen((open) => !open);
 
   // Mantiene el input sincronizado con la URL
-  // �til al volver/adelantar o compartir links
   useEffect(() => {
-    const q = sp.get('q') || '';
+    const q = sp.get("q") || "";
     setQuery(q);
-  }, [location.search]);
+  }, [location.search, sp]);
 
-  // B�squeda en vivo: navega/actualiza resultados mientras se escribe
+  // Búsqueda en vivo: navega/actualiza resultados mientras se escribe
   useEffect(() => {
+    // --- INICIO DE LA CORRECIÓN ---
+    // 1. Determina si estamos en una página "buscable"
+    const isAdminPath = location.pathname.startsWith("/admin");
+    const isCatalogPath = location.pathname.startsWith("/catalogo");
+
+    // 2. GUARD CLAUSE: Si no estamos en admin o catalogo, no hacemos nada.
+    // Esto evita que la búsqueda "en vivo" nos saque de /item/123 o /
+    if (!isAdminPath && !isCatalogPath) {
+      return; 
+    }
+    // --- FIN DE LA CORRECIÓN ---
+
     const id = setTimeout(() => {
-      const q = (query || '').trim();
-      if (location.pathname === '/catalogo' || location.pathname === '/admin') {
-        const base = location.pathname;
-        const target = q ? `${base}?q=${encodeURIComponent(q)}` : base;
-        const expectedSearch = q ? `?q=${encodeURIComponent(q)}` : '';
-        if (location.search !== expectedSearch) {
-          navigate(target, { replace: true });
-        }
+      const q = (query || "").trim();
+
+      const basePath = isAdminPath ? "/admin" : "/catalogo";
+      const targetSearch = q ? `?q=${encodeURIComponent(q)}` : "";
+      const target = `${basePath}${targetSearch}`;
+
+      if (location.pathname !== basePath || location.search !== targetSearch) {
+        // Usar 'replace: true' es mejor para la búsqueda en vivo, no llena el historial
+        navigate(target, { replace: true });
       }
     }, 250);
     return () => clearTimeout(id);
-  }, [query, location.pathname, location.search]);
+  }, [query, location.pathname, navigate]);
 
   const onSubmitSearch = (e) => {
     e.preventDefault();
-    const q = (query || '').trim();
-    const base = location.pathname === '/admin' ? '/admin' : '/catalogo';
-    navigate(q ? `${base}?q=${encodeURIComponent(q)}` : base);
+    const q = (query || "").trim();
+
+    // Esta lógica está bien, al hacer "Enter" sí queremos navegar
+    const isAdminPath = location.pathname.startsWith("/admin");
+    const basePath = isAdminPath ? "/admin" : "/catalogo";
+    const target = q ? `${basePath}?q=${encodeURIComponent(q)}` : basePath;
+    
+    navigate(target);
     setIsSearchOpen(false);
   };
 
@@ -195,7 +212,14 @@ const Header = () => {
               aria-label="Ver bolsa de compras"
               onClick={toggle}
             >
-              <BagIcon className="h-5 w-5" />
+              <div className="relative">
+                <BagIcon className="h-5 w-5" />
+                {items.length > 0 && (
+                  <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                    {items.length}
+                  </span>
+                )}
+              </div>
             </button>
             <Link
               to="/mis-compras"
@@ -269,4 +293,3 @@ const Header = () => {
 };
 
 export default Header;
-

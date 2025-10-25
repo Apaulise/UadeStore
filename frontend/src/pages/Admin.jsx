@@ -68,7 +68,6 @@ const Admin = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // --- CAMBIO 2: Inicializa hooks ---
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 

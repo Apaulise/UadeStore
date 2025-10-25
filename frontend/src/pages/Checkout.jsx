@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { usePendingOrder } from '../context/PendingOrderContext';
+import { OrdersAPI } from '../services/api';
 
 const accentColor = '#1F3B67';
 const pickupDate = '01/07/2025';
@@ -47,28 +48,43 @@ const Checkout = () => {
     navigate(-1);
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (isProcessing) return;
     setIsProcessing(true);
 
-    const orderDraft = {
-      contact: { email, notifyOffers },
-      pickupDate,
-      items: orderPreview,
-      total,
-      createdAt: new Date().toISOString(),
+
+    const userIdPlaceholder = 1; 
+
+    const orderPayload =  {
+      userId: userIdPlaceholder, 
+      items: items.map(item => ({ 
+          stockId: item.stockId, 
+          quantity: item.quantity,
+          price: item.price,
+      })),
+      total: total,
     };
 
-    // Esta estructura quedará lista para integrarse con el backend / cola de eventos.
-    console.info('checkout:pending-submission', orderDraft);
+    console.info('Enviando orden a la APIIIII:', orderPayload);
 
-    setTimeout(() => {
-      setLastOrder(orderDraft);
-      clear();
-      toast.success('Pago confirmado correctamente');
-      setIsProcessing(false);
+    try {
+      // --- LLAMADA REAL A LA API ---
+      const response = await OrdersAPI.create(orderPayload);
+      console.log('Respuesta de la API:', response.data); // Loguea la respuesta
+
+      // Si la API responde OK, procedemos como antes
+      setLastOrder(response.data.data); // Guarda la orden creada (puede necesitar ajuste según la respuesta real)
+      clear(); // Llama a la función para vaciar el carrito (que llama a la API del carrito)
+      toast.success('Compra realizada con éxito');
       navigate('/checkout/exito');
-    }, 600);
+
+    } catch (err) {
+      console.error("Error al crear la orden:", err);
+      //setError(err.response?.data?.message || err.message || 'No se pudo procesar el pago.');
+      toast.error(err.response?.data?.message || 'Error al procesar el pago');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (

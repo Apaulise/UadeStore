@@ -93,14 +93,28 @@ const ProductCard = ({ product, variant = "catalog", onEdit }) => {
           <p className="text-xl font-bold text-brand-text">
             ${Number(product.price ?? 0).toFixed(2)}
           </p>
-          {defaultVariant?.colorName && (
-            <div className="flex items-center gap-2 text-xs text-brand-text/70">
-              <span
-                className="h-4 w-4 rounded-full border border-black/10"
-                style={{ backgroundColor: ensureHex(defaultVariant.colorHex) }}
-                title={defaultVariant.colorName}
-              />
-              <span>{defaultVariant.colorName}</span>
+          {Array.from(
+            new Map(
+              (product.variants ?? [])
+                .filter((v) => v.available && (v.colorName || v.colorHex))
+                .map((v) => [v.colorId ?? v.colorHex ?? v.colorName, v]),
+            ).values(),
+          ).length > 0 && (
+            <div className="mt-1 flex items-center gap-2">
+              {Array.from(
+                new Map(
+                  (product.variants ?? [])
+                    .filter((v) => v.available && (v.colorName || v.colorHex))
+                    .map((v) => [v.colorId ?? v.colorHex ?? v.colorName, v]),
+                ).values(),
+              ).map((v) => (
+                <span
+                  key={v.colorId ?? v.colorHex ?? v.colorName}
+                  className="h-4 w-4 rounded-full border border-black/10"
+                  style={{ backgroundColor: ensureHex(v.colorHex) }}
+                  title={v.colorName ?? "Color"}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -111,7 +125,7 @@ const ProductCard = ({ product, variant = "catalog", onEdit }) => {
           <button
             onClick={handleQuickAdd}
             disabled={!defaultVariant?.available}
-            className="w-full rounded-lg bg-brand-blue py-2 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-brand-blue/40"
+            className="w-full rounded-lg border-2 border-[#1F3B67] bg-[#1F3B67] py-2 font-semibold text-white transition hover:bg-transparent hover:text-[#1F3B67] disabled:cursor-not-allowed disabled:border-[#1F3B67] disabled:bg-[#1F3B67] disabled:text-white"
           >
             Agregar al carrito
           </button>

@@ -178,6 +178,8 @@ const ProductDetail = () => {
   const colorOptions = useMemo(() => {
     if (!product) return [];
     const map = new Map();
+
+    // 1. Obtenemos todos los colores únicos primero
     product.variants.forEach((variant) => {
       const key = variant.colorId ?? "default";
       if (!map.has(key)) {
@@ -185,32 +187,65 @@ const ProductDetail = () => {
           id: key === "default" ? null : key,
           label: variant.colorName ?? "Único",
           hex: variant.colorHex ?? "#1F3B67",
+          available: false, // Empezamos asumiendo que no está disponible
         });
       }
     });
+
+    // 2. Determinamos la disponibilidad basados en el talle seleccionado
+    product.variants
+      .filter((variant) =>
+        // Filtramos por el talle seleccionado (si hay uno)
+        selectedSize === null || selectedSize === undefined
+          ? variant.available // Si no hay talle, solo chequeamos si la variante tiene stock
+          : (variant.size ?? null) === (selectedSize ?? null) && variant.available,
+      )
+      .forEach((availableVariant) => {
+        // Marcamos el color de esta variante disponible como 'available'
+        const key = availableVariant.colorId ?? "default";
+        if (map.has(key)) {
+          map.get(key).available = true;
+        }
+      });
+
     return Array.from(map.values());
-  }, [product]);
+  }, [product, selectedSize]); 
 
-  const sizeOptions = useMemo(() => {
+const sizeOptions = useMemo(() => {
     if (!product) return [];
-    const variants = product.variants.filter((variant) =>
-      selectedColor === null || selectedColor === undefined
-        ? true
-        : variant.colorId === selectedColor,
-    );
-
     const map = new Map();
-    variants.forEach((variant) => {
+
+    // 1. Obtenemos TODOS los talles únicos primero, sin importar el stock o color
+    product.variants.forEach((variant) => {
       const label = variant.size ?? "Único";
       if (!map.has(label)) {
         map.set(label, {
           label,
           value: variant.size ?? null,
-          available: variant.available,
+          available: false, // Empezamos asumiendo que NO está disponible
         });
       }
     });
 
+    // 2. Ahora, en una segunda pasada, determinamos la disponibilidad
+    // basándonos en el color seleccionado
+    product.variants
+      .filter((variant) =>
+        // Filtramos las variantes que SÍ tienen stock para el color seleccionado
+        selectedColor === null || selectedColor === undefined
+          ? variant.available // Si no hay color seleccionado, chequeamos que la variante tenga stock
+          : variant.colorId === selectedColor && variant.available, // Si hay color, chequeamos color Y stock
+      )
+      .forEach((availableVariant) => {
+        // Marcamos el talle de esta variante disponible como 'available: true'
+        const label = availableVariant.size ?? "Único";
+        if (map.has(label)) {
+          map.get(label).available = true;
+        }
+      });
+
+    // 6. Devolvemos el array COMPLETO (ej: [S, M, L]) donde cada item
+    // tiene su 'available' correcto.
     return Array.from(map.values());
   }, [product, selectedColor]);
 
@@ -348,7 +383,7 @@ const ProductDetail = () => {
             {colorOptions.length > 0 && (
               <div>
                 <p className="text-sm font-semibold text-brand-text">
-                  Color: {" "}
+                  Color:{" "}
                   <span className="font-normal">
                     {
                       colorOptions.find((color) => color.id === selectedColor)?.label ??
@@ -358,26 +393,31 @@ const ProductDetail = () => {
                   </span>
                 </p>
                 <div className="mt-3 flex flex-wrap gap-3">
+                  {/* --- INICIO DE JSX DE COLOR CORREGIDO --- */}
                   {colorOptions.map((option) => (
                     <button
                       key={option.id ?? "default"}
                       type="button"
                       onClick={() => setSelectedColor(option.id ?? null)}
-                      className="h-9 w-9 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue hover:shadow"
+                      className={`h-9 w-9 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue hover:shadow ${
+                        option.available ? "" : "cursor-not-allowed opacity-50"
+                      }`}
                       style={{
                         backgroundColor: ensureHex(option.hex),
                         borderColor:
                           (selectedColor ?? null) === (option.id ?? null)
-                            ? "#1F3B67"
-                            : "transparent",
+                            ? "#1F3B67" // Borde seleccionado
+                            : "rgba(0, 0, 0, 0.1)", // Borde por defecto
                         boxShadow:
                           (selectedColor ?? null) === (option.id ?? null)
                             ? "0 0 0 4px rgba(31,59,103,0.25)"
                             : undefined,
                       }}
                       aria-label={`Seleccionar color ${option.label}`}
+                      disabled={!option.available} // Se deshabilita si no está disponible
                     />
                   ))}
+                  {/* --- FIN DE JSX DE COLOR CORREGIDO --- */}
                 </div>
               </div>
             )}
@@ -402,8 +442,8 @@ const ProductDetail = () => {
                       onClick={() => setSelectedSize(option.value)}
                       className={`min-w-10 rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
                         (selectedSize ?? null) === (option.value ?? null)
-                          ? "border-brand-blue bg-brand-blue text-white"
-                          : "border-black/15 bg-white text-brand-text hover:border-brand-blue/60"
+                          ? "border-[#1F3B67] bg-white text-brand-text"
+                          : "border-black/15 bg-white text-brand-text hover:border-[#1F3B67]"
                       } ${option.available ? "" : "cursor-not-allowed opacity-50"}`}
                       disabled={!option.available}
                     >
@@ -444,10 +484,11 @@ const ProductDetail = () => {
               type="button"
               onClick={handleAddToCart}
               disabled={isAddDisabled}
-              className="w-full rounded-full py-3 text-lg font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: isAddDisabled ? "#9AA3B5" : "#1F3B67",
-              }}
+              className={`w-full rounded-full border-2 py-3 text-lg font-semibold transition disabled:cursor-not-allowed ${
+                isAddDisabled
+                  ? "border-[#1F3B67] bg-[#1F3B67] text-white"
+                  : "border-[#1F3B67] bg-[#1F3B67] text-white hover:bg-transparent hover:text-[#1F3B67]"
+              }`}
             >
               {isAddDisabled ? "Sin stock" : "Agregar al carrito"}
             </button>

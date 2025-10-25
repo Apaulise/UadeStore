@@ -83,28 +83,50 @@ const Header = () => {
   const toggleSearch = () => setIsSearchOpen((open) => !open);
 
   // Mantiene el input sincronizado con la URL
-  // �til al volver/adelantar o compartir links
   useEffect(() => {
-    const q = sp.get('q') || '';
+    const q = sp.get("q") || "";
     setQuery(q);
-  }, [location.search]);
+  }, [location.search, sp]);
 
-  // B�squeda en vivo: navega/actualiza resultados mientras se escribe
+  // Búsqueda en vivo: navega/actualiza resultados mientras se escribe
   useEffect(() => {
+    // --- INICIO DE LA CORRECIÓN ---
+    // 1. Determina si estamos en una página "buscable"
+    const isAdminPath = location.pathname.startsWith("/admin");
+    const isCatalogPath = location.pathname.startsWith("/catalogo");
+
+    // 2. GUARD CLAUSE: Si no estamos en admin o catalogo, no hacemos nada.
+    // Esto evita que la búsqueda "en vivo" nos saque de /item/123 o /
+    if (!isAdminPath && !isCatalogPath) {
+      return; 
+    }
+    // --- FIN DE LA CORRECIÓN ---
+
     const id = setTimeout(() => {
-      const q = (query || '').trim();
-      const target = q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo';
-      if (!(location.pathname === '/catalogo' && location.search === (q ? `?q=${encodeURIComponent(q)}` : ''))) {
-        navigate(target, { replace: location.pathname === '/catalogo' });
+      const q = (query || "").trim();
+
+      const basePath = isAdminPath ? "/admin" : "/catalogo";
+      const targetSearch = q ? `?q=${encodeURIComponent(q)}` : "";
+      const target = `${basePath}${targetSearch}`;
+
+      if (location.pathname !== basePath || location.search !== targetSearch) {
+        // Usar 'replace: true' es mejor para la búsqueda en vivo, no llena el historial
+        navigate(target, { replace: true });
       }
     }, 250);
     return () => clearTimeout(id);
-  }, [query]);
+  }, [query, location.pathname, navigate]);
 
   const onSubmitSearch = (e) => {
     e.preventDefault();
-    const q = (query || '').trim();
-    navigate(q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo');
+    const q = (query || "").trim();
+
+    // Esta lógica está bien, al hacer "Enter" sí queremos navegar
+    const isAdminPath = location.pathname.startsWith("/admin");
+    const basePath = isAdminPath ? "/admin" : "/catalogo";
+    const target = q ? `${basePath}?q=${encodeURIComponent(q)}` : basePath;
+    
+    navigate(target);
     setIsSearchOpen(false);
   };
 
@@ -132,6 +154,7 @@ const Header = () => {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
+            {location.pathname !== '/admin' && (
             <form className="relative" role="search" onSubmit={onSubmitSearch}>
               <label className="sr-only" htmlFor="desktop-search">
                 Buscar productos
@@ -146,6 +169,7 @@ const Header = () => {
                 className="w-56 rounded-full border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-brand-text placeholder:text-brand-text/50 focus:outline-none focus:ring-2 focus:ring-black/30"
               />
             </form>
+            )}
             <button
               type="button"
               className="rounded-full p-2 text-brand-text transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
@@ -170,6 +194,7 @@ const Header = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
+            {location.pathname !== '/admin' && (
             <button
               type="button"
               onClick={toggleSearch}
@@ -180,13 +205,21 @@ const Header = () => {
             >
               <SearchIcon className="h-5 w-5" />
             </button>
+            )}
             <button
               type="button"
               className="rounded-full p-2 transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               aria-label="Ver bolsa de compras"
               onClick={toggle}
             >
-              <BagIcon className="h-5 w-5" />
+              <div className="relative">
+                <BagIcon className="h-5 w-5" />
+                {items.length > 0 && (
+                  <span className="absolute -right-1 -top-1 h-4 min-w-4 rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                    {items.length}
+                  </span>
+                )}
+              </div>
             </button>
             <Link
               to="/mis-compras"
@@ -221,7 +254,7 @@ const Header = () => {
           </div>
         </div>
 
-        {isSearchOpen && (
+        {location.pathname !== '/admin' && isSearchOpen && (
           <form
             id="mobile-search"
             role="search"
@@ -260,4 +293,3 @@ const Header = () => {
 };
 
 export default Header;
-

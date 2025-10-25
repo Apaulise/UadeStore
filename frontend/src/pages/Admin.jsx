@@ -1,5 +1,7 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
 import { toast } from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/layout/ProductCard";
 import ProductEditModal from "../components/admin/ProductEditModal";
 import { ProductsAPI } from "../services/api";
@@ -63,6 +65,12 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [colorsCatalog, setColorsCatalog] = useState([]);
   const [sizesCatalog, setSizesCatalog] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // --- CAMBIO 2: Inicializa hooks ---
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,6 +89,8 @@ const Admin = () => {
           ? Math.max(...mappedProducts.map((product) => product.price))
           : 0;
         setPriceCeiling(maxPrice);
+        
+        // Se actualiza el maxPrice pero se respeta la query de la URL (que se seteará en el otro useEffect)
         setFilters((prev) => ({ ...prev, maxPrice: maxPrice || 0 }));
 
         setColorsCatalog(colorsResponse ?? []);
@@ -95,54 +105,81 @@ const Admin = () => {
     };
 
     fetchData();
-  }, []);
+  }, []); // Este se ejecuta solo una vez
+
+  // --- CAMBIO 3: Nuevo useEffect ---
+  // Sincroniza el parámetro 'q' de la URL con el estado de los filtros
+  useEffect(() => {
+    const queryFromUrl = searchParams.get("q") || "";
+    setFilters((prev) => {
+      if (prev.query !== queryFromUrl) {
+        return { ...prev, query: queryFromUrl };
+      }
+      return prev; 
+    });
+  }, [location.search, searchParams]); // Se ejecuta al cambiar la URL/búsqueda
+
+  // Sincroniza ?q= con el filtro local de Admin
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    setFilters((prev) => ({ ...prev, query: q }));
+  }, [searchParams]);
 
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((product) => {
-      if (filters.category && product.category !== filters.category) {
-        return false;
-      }
+    let list = allProducts.filter((product) => {
+      if (filters.category && product.category !== filters.category) return false;
 
       if (
         filters.sizes.length > 0 &&
-        !product.variants.some(
-          (variant) => variant.size && filters.sizes.includes(variant.size)
-        )
-      ) {
+        !product.variants.some((variant) => variant.size && filters.sizes.includes(variant.size))
+      )
         return false;
-      }
 
       if (
         filters.colors.length > 0 &&
         !product.variants.some(
-          (variant) =>
-            variant.colorName && filters.colors.includes(variant.colorName)
+          (variant) => variant.colorName && filters.colors.includes(variant.colorName),
         )
-      ) {
+      )
         return false;
-      }
 
-      if (filters.inStockOnly && !product.variants.some((variant) => variant.available)) {
-        return false;
-      }
+      if (filters.inStockOnly && !product.variants.some((variant) => variant.available)) return false;
 
-      if (filters.maxPrice && product.price > filters.maxPrice) {
-        return false;
-      }
+      if (filters.maxPrice && product.price > filters.maxPrice) return false;
 
+      // Esta lógica ya la tenías y ahora funcionará con el 'filters.query' de la URL
       if (filters.query && filters.query.trim()) {
         const term = filters.query.trim().toLowerCase();
         const haystack = [product.name, product.category, product.description]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        if (!haystack.includes(term)) {
-          return false;
-        }
+        if (!haystack.includes(term)) return false;
       }
 
       return true;
     });
+
+    if (filters.query && filters.query.trim()) {
+      const term = filters.query.trim().toLowerCase();
+      list = list
+        .map((p) => {
+          const name = (p.name || "").toLowerCase();
+          const words = name.split(/\s+/).filter(Boolean);
+          const starts = name.startsWith(term);
+          const wordStarts = !starts && words.some((w) => w.startsWith(term));
+          const nameIncludes = !starts && !wordStarts && name.includes(term);
+          let rank = 3;
+          if (starts) rank = 0;
+          else if (wordStarts) rank = 1;
+          else if (nameIncludes) rank = 2;
+          return { p, rank };
+        })
+        .sort((a, b) => (a.rank - b.rank) || a.p.name.localeCompare(b.p.name))
+        .map((entry) => entry.p);
+    }
+
+    return list;
   }, [allProducts, filters]);
 
   const availableOptions = useMemo(() => {
@@ -195,9 +232,36 @@ const Admin = () => {
     setFilters((prev) => ({ ...prev, maxPrice: Number(event.target.value) }));
   };
 
+  // --- CAMBIO 4: Función 'clearFilters' actualizada ---
   const clearFilters = () => {
-    setFilters({ ...initialFilters, maxPrice: priceCeiling });
+    // Resetea el estado de filtros, manteniendo el 'maxPrice' y la 'query' de la URL
+    setFilters((prev) => ({ 
+      ...initialFilters, 
+      maxPrice: priceCeiling,
+      query: prev.query // Mantiene la query por si el usuario solo quería limpiar filtros de checkbox
+    }));
+
+    // Si el usuario quiere limpiar la query, usará la 'x' del input (manejado por el Header)
+    // Este botón "Limpiar" es para los filtros de la sidebar
+    // Si quisieras que este botón TAMBIÉN limpie la búsqueda de la URL:
+    // setFilters({ ...initialFilters, maxPrice: priceCeiling });
+    // if (location.search) {
+    //   navigate(location.pathname);
+    // }
   };
+  
+  // (Edito mi lógica anterior: El botón "Limpiar" de los filtros no debería
+  // limpiar la búsqueda principal. Solo debe limpiar los filtros de la sidebar.
+  // La lógica del 'Header' y el 'useEffect' que agregamos ya maneja la sincronización.
+  // Solo tenemos que resetear el estado local sin tocar la 'query')
+  const clearSidebarFilters = () => {
+    setFilters((prev) => ({
+      ...initialFilters,
+      maxPrice: priceCeiling,
+      query: prev.query, // Mantenemos la query de la URL
+    }));
+  };
+
 
   const openEditor = (product) => setEditingProduct(product);
   const closeEditor = () => setEditingProduct(null);
@@ -249,9 +313,26 @@ const Admin = () => {
         <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-gray-900">
           Administración
         </h1>
-        <p className="mb-8 text-gray-600">
+        <p className="mb-3 text-gray-600">
           Mostrando {filteredProducts.length} de {allProducts.length} productos.
         </p>
+
+        <div className="mb-8 flex items-center justify-end">
+          <input
+            type="search"
+            value={filters.query}
+            onChange={(e) => {
+              const q = e.target.value;
+              setFilters((prev) => ({ ...prev, query: q }));
+              const params = new URLSearchParams(searchParams);
+              if (q) params.set("q", q); else params.delete("q");
+              setSearchParams(params);
+            }}
+            placeholder="Buscar en admin"
+            className="w-72 rounded-full border border-black/10 bg-white py-2 px-4 text-sm text-brand-text placeholder:text-brand-text/50 shadow-sm focus:border-[#1F3B67] focus:outline-none focus:ring-2 focus:ring-[#1F3B67]/30"
+            aria-label="Buscar productos en administracion"
+          />
+        </div>
 
         <div className="flex flex-col gap-8 md:flex-row lg:gap-12">
           <aside className="w-full flex-shrink-0 md:w-64 lg:w-72">
@@ -259,7 +340,7 @@ const Admin = () => {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Filtros</h2>
                 <button
-                  onClick={clearFilters}
+                  onClick={clearSidebarFilters} // <-- CAMBIO 5: Usamos la nueva función
                   className="text-sm font-medium text-blue-600 hover:text-blue-800"
                 >
                   Limpiar
@@ -370,7 +451,12 @@ const Admin = () => {
             ) : (
               <div className="py-16 text-center">
                 <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-                <p className="mt-2 text-gray-600">Ajusta los filtros para ver otros resultados.</p>
+                <p className="mt-2 text-gray-600">
+                  {filters.query 
+                    ? "No hay productos que coincidan con tu búsqueda."
+                    : "Ajusta los filtros para ver otros resultados."
+                  }
+                </p>
               </div>
             )}
           </main>

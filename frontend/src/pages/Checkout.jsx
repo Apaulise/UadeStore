@@ -73,7 +73,7 @@ const Checkout = () => {
       console.log('Respuesta de la API:', response.data); // Loguea la respuesta
 
       // Si la API responde OK, procedemos como antes
-      setLastOrder(response.data.data); // Guarda la orden creada (puede necesitar ajuste según la respuesta real)
+      setLastOrder(response.data); // Guarda la orden creada (puede necesitar ajuste según la respuesta real)
       clear(); // Llama a la función para vaciar el carrito (que llama a la API del carrito)
       toast.success('Compra realizada con éxito');
       navigate('/checkout/exito');

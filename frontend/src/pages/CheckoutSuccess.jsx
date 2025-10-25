@@ -15,7 +15,7 @@ const CheckoutSuccess = () => {
   const { lastOrder, clearLastOrder } = usePendingOrder();
 
   const order = lastOrder ?? {
-    pickupDate: '01/07/2025',
+    pickupDate: '01/11/2025',
     items: [],
     total: 0,
   };

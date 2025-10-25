@@ -1,11 +1,19 @@
 import * as purchaseService from '../services/purchase.service.js';
 
-export const createPurchaseController = async (req, res) => {
+ export const createPurchaseController = async (req, res) => {
   try {
-    const purchaseData = req.body; // Tomamos los datos del cuerpo de la petición
-    const newPurchase = await purchaseService.createNewPurchase(purchaseData);
-    res.status(201).json({ message: 'Compra creada con éxito', data: newPurchase });
+    // Aquí podrías añadir validación del req.body
+    const purchaseData = req.body;
+    // Asume que obtienes userId de alguna forma (ej: autenticación, o viene en el body)
+    // Para simplificar, lo tomamos del body por ahora
+    if (!purchaseData.userId) {
+        return res.status(400).json({ message: 'userId es requerido'});
+    }
+
+    const newOrder = await purchaseService.createOrder(purchaseData);
+    res.status(201).json({ message: 'Orden creada con éxito', data: newOrder });
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear la compra', error: error.message });
+    console.error("Error en createOrderController:", error);
+    res.status(500).json({ message: 'Error al procesar la orden', error: error.message });
   }
 };

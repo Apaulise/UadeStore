@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useSearchParams, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
 import { toast } from "react-hot-toast";
 import ProductCard from "../components/layout/ProductCard";
 import ProductEditModal from "../components/admin/ProductEditModal";
@@ -64,6 +65,11 @@ const Admin = () => {
   const [colorsCatalog, setColorsCatalog] = useState([]);
   const [sizesCatalog, setSizesCatalog] = useState([]);
 
+  // --- CAMBIO 2: Inicializa hooks ---
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -81,6 +87,8 @@ const Admin = () => {
           ? Math.max(...mappedProducts.map((product) => product.price))
           : 0;
         setPriceCeiling(maxPrice);
+        
+        // Se actualiza el maxPrice pero se respeta la query de la URL (que se seteará en el otro useEffect)
         setFilters((prev) => ({ ...prev, maxPrice: maxPrice || 0 }));
 
         setColorsCatalog(colorsResponse ?? []);
@@ -95,7 +103,19 @@ const Admin = () => {
     };
 
     fetchData();
-  }, []);
+  }, []); // Este se ejecuta solo una vez
+
+  // --- CAMBIO 3: Nuevo useEffect ---
+  // Sincroniza el parámetro 'q' de la URL con el estado de los filtros
+  useEffect(() => {
+    const queryFromUrl = searchParams.get("q") || "";
+    setFilters((prev) => {
+      if (prev.query !== queryFromUrl) {
+        return { ...prev, query: queryFromUrl };
+      }
+      return prev; 
+    });
+  }, [location.search, searchParams]); // Se ejecuta al cambiar la URL/búsqueda
 
   const filteredProducts = useMemo(() => {
     return allProducts.filter((product) => {
@@ -130,6 +150,7 @@ const Admin = () => {
         return false;
       }
 
+      // Esta lógica ya la tenías y ahora funcionará con el 'filters.query' de la URL
       if (filters.query && filters.query.trim()) {
         const term = filters.query.trim().toLowerCase();
         const haystack = [product.name, product.category, product.description]
@@ -195,9 +216,36 @@ const Admin = () => {
     setFilters((prev) => ({ ...prev, maxPrice: Number(event.target.value) }));
   };
 
+  // --- CAMBIO 4: Función 'clearFilters' actualizada ---
   const clearFilters = () => {
-    setFilters({ ...initialFilters, maxPrice: priceCeiling });
+    // Resetea el estado de filtros, manteniendo el 'maxPrice' y la 'query' de la URL
+    setFilters((prev) => ({ 
+      ...initialFilters, 
+      maxPrice: priceCeiling,
+      query: prev.query // Mantiene la query por si el usuario solo quería limpiar filtros de checkbox
+    }));
+
+    // Si el usuario quiere limpiar la query, usará la 'x' del input (manejado por el Header)
+    // Este botón "Limpiar" es para los filtros de la sidebar
+    // Si quisieras que este botón TAMBIÉN limpie la búsqueda de la URL:
+    // setFilters({ ...initialFilters, maxPrice: priceCeiling });
+    // if (location.search) {
+    //   navigate(location.pathname);
+    // }
   };
+  
+  // (Edito mi lógica anterior: El botón "Limpiar" de los filtros no debería
+  // limpiar la búsqueda principal. Solo debe limpiar los filtros de la sidebar.
+  // La lógica del 'Header' y el 'useEffect' que agregamos ya maneja la sincronización.
+  // Solo tenemos que resetear el estado local sin tocar la 'query')
+  const clearSidebarFilters = () => {
+    setFilters((prev) => ({
+      ...initialFilters,
+      maxPrice: priceCeiling,
+      query: prev.query, // Mantenemos la query de la URL
+    }));
+  };
+
 
   const openEditor = (product) => setEditingProduct(product);
   const closeEditor = () => setEditingProduct(null);
@@ -259,7 +307,7 @@ const Admin = () => {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Filtros</h2>
                 <button
-                  onClick={clearFilters}
+                  onClick={clearSidebarFilters} // <-- CAMBIO 5: Usamos la nueva función
                   className="text-sm font-medium text-blue-600 hover:text-blue-800"
                 >
                   Limpiar
@@ -370,7 +418,12 @@ const Admin = () => {
             ) : (
               <div className="py-16 text-center">
                 <h3 className="text-xl font-semibold">No se encontraron productos</h3>
-                <p className="mt-2 text-gray-600">Ajusta los filtros para ver otros resultados.</p>
+                <p className="mt-2 text-gray-600">
+                  {filters.query 
+                    ? "No hay productos que coincidan con tu búsqueda."
+                    : "Ajusta los filtros para ver otros resultados."
+                  }
+                </p>
               </div>
             )}
           </main>

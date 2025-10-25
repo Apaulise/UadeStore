@@ -123,12 +123,13 @@ const Catalog = () => {
       products = products.filter((product) => product.hasStock);
     }
 
-    if (filters.maxPrice) {
-      products = products.filter((product) => Number(product.price) <= filters.maxPrice);
-    }
+    products = products.filter(
+      (product) => Number(product.price) <= Number(filters.maxPrice ?? priceCeiling),
+    );
 
     if (filters.query && filters.query.trim()) {
       const term = filters.query.trim().toLowerCase();
+      // Primero filtra por coincidencia en cualquier campo
       products = products.filter((product) => {
         const combined = [
           product.name,
@@ -141,6 +142,23 @@ const Catalog = () => {
           .toLowerCase();
         return combined.includes(term);
       });
+
+      // Luego ordena priorizando: nombre empieza con el término > palabra del nombre empieza con término > resto
+      products = products
+        .map((p) => {
+          const name = (p.name || "").toLowerCase();
+          const words = name.split(/\s+/).filter(Boolean);
+          const starts = name.startsWith(term);
+          const wordStarts = !starts && words.some((w) => w.startsWith(term));
+          const nameIncludes = !starts && !wordStarts && name.includes(term);
+          let rank = 3;
+          if (starts) rank = 0;
+          else if (wordStarts) rank = 1;
+          else if (nameIncludes) rank = 2;
+          return { p, rank };
+        })
+        .sort((a, b) => (a.rank - b.rank) || a.p.name.localeCompare(b.p.name))
+        .map((entry) => entry.p);
     }
 
     setFilteredProducts(products);

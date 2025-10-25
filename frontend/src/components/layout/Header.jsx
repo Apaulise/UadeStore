@@ -93,18 +93,23 @@ const Header = () => {
   useEffect(() => {
     const id = setTimeout(() => {
       const q = (query || '').trim();
-      const target = q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo';
-      if (!(location.pathname === '/catalogo' && location.search === (q ? `?q=${encodeURIComponent(q)}` : ''))) {
-        navigate(target, { replace: location.pathname === '/catalogo' });
+      if (location.pathname === '/catalogo' || location.pathname === '/admin') {
+        const base = location.pathname;
+        const target = q ? `${base}?q=${encodeURIComponent(q)}` : base;
+        const expectedSearch = q ? `?q=${encodeURIComponent(q)}` : '';
+        if (location.search !== expectedSearch) {
+          navigate(target, { replace: true });
+        }
       }
     }, 250);
     return () => clearTimeout(id);
-  }, [query]);
+  }, [query, location.pathname, location.search]);
 
   const onSubmitSearch = (e) => {
     e.preventDefault();
     const q = (query || '').trim();
-    navigate(q ? `/catalogo?q=${encodeURIComponent(q)}` : '/catalogo');
+    const base = location.pathname === '/admin' ? '/admin' : '/catalogo';
+    navigate(q ? `${base}?q=${encodeURIComponent(q)}` : base);
     setIsSearchOpen(false);
   };
 
@@ -132,6 +137,7 @@ const Header = () => {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
+            {location.pathname !== '/admin' && (
             <form className="relative" role="search" onSubmit={onSubmitSearch}>
               <label className="sr-only" htmlFor="desktop-search">
                 Buscar productos
@@ -146,6 +152,7 @@ const Header = () => {
                 className="w-56 rounded-full border border-black/10 bg-white py-2 pl-9 pr-3 text-sm text-brand-text placeholder:text-brand-text/50 focus:outline-none focus:ring-2 focus:ring-black/30"
               />
             </form>
+            )}
             <button
               type="button"
               className="rounded-full p-2 text-brand-text transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
@@ -170,6 +177,7 @@ const Header = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">
+            {location.pathname !== '/admin' && (
             <button
               type="button"
               onClick={toggleSearch}
@@ -180,6 +188,7 @@ const Header = () => {
             >
               <SearchIcon className="h-5 w-5" />
             </button>
+            )}
             <button
               type="button"
               className="rounded-full p-2 transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
@@ -221,7 +230,7 @@ const Header = () => {
           </div>
         </div>
 
-        {isSearchOpen && (
+        {location.pathname !== '/admin' && isSearchOpen && (
           <form
             id="mobile-search"
             role="search"

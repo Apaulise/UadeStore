@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/layout/ProductCard";
 import ProductEditModal from "../components/admin/ProductEditModal";
 import { ProductsAPI } from "../services/api";
@@ -63,6 +64,7 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [colorsCatalog, setColorsCatalog] = useState([]);
   const [sizesCatalog, setSizesCatalog] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -97,38 +99,33 @@ const Admin = () => {
     fetchData();
   }, []);
 
+  // Sincroniza ?q= con el filtro local de Admin
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    setFilters((prev) => ({ ...prev, query: q }));
+  }, [searchParams]);
+
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((product) => {
-      if (filters.category && product.category !== filters.category) {
-        return false;
-      }
+    let list = allProducts.filter((product) => {
+      if (filters.category && product.category !== filters.category) return false;
 
       if (
         filters.sizes.length > 0 &&
-        !product.variants.some(
-          (variant) => variant.size && filters.sizes.includes(variant.size)
-        )
-      ) {
+        !product.variants.some((variant) => variant.size && filters.sizes.includes(variant.size))
+      )
         return false;
-      }
 
       if (
         filters.colors.length > 0 &&
         !product.variants.some(
-          (variant) =>
-            variant.colorName && filters.colors.includes(variant.colorName)
+          (variant) => variant.colorName && filters.colors.includes(variant.colorName),
         )
-      ) {
+      )
         return false;
-      }
 
-      if (filters.inStockOnly && !product.variants.some((variant) => variant.available)) {
-        return false;
-      }
+      if (filters.inStockOnly && !product.variants.some((variant) => variant.available)) return false;
 
-      if (filters.maxPrice && product.price > filters.maxPrice) {
-        return false;
-      }
+      if (filters.maxPrice && product.price > filters.maxPrice) return false;
 
       if (filters.query && filters.query.trim()) {
         const term = filters.query.trim().toLowerCase();
@@ -136,13 +133,32 @@ const Admin = () => {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        if (!haystack.includes(term)) {
-          return false;
-        }
+        if (!haystack.includes(term)) return false;
       }
 
       return true;
     });
+
+    if (filters.query && filters.query.trim()) {
+      const term = filters.query.trim().toLowerCase();
+      list = list
+        .map((p) => {
+          const name = (p.name || "").toLowerCase();
+          const words = name.split(/\s+/).filter(Boolean);
+          const starts = name.startsWith(term);
+          const wordStarts = !starts && words.some((w) => w.startsWith(term));
+          const nameIncludes = !starts && !wordStarts && name.includes(term);
+          let rank = 3;
+          if (starts) rank = 0;
+          else if (wordStarts) rank = 1;
+          else if (nameIncludes) rank = 2;
+          return { p, rank };
+        })
+        .sort((a, b) => (a.rank - b.rank) || a.p.name.localeCompare(b.p.name))
+        .map((entry) => entry.p);
+    }
+
+    return list;
   }, [allProducts, filters]);
 
   const availableOptions = useMemo(() => {
@@ -249,9 +265,26 @@ const Admin = () => {
         <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-gray-900">
           Administración
         </h1>
-        <p className="mb-8 text-gray-600">
+        <p className="mb-3 text-gray-600">
           Mostrando {filteredProducts.length} de {allProducts.length} productos.
         </p>
+
+        <div className="mb-8 flex items-center justify-end">
+          <input
+            type="search"
+            value={filters.query}
+            onChange={(e) => {
+              const q = e.target.value;
+              setFilters((prev) => ({ ...prev, query: q }));
+              const params = new URLSearchParams(searchParams);
+              if (q) params.set("q", q); else params.delete("q");
+              setSearchParams(params);
+            }}
+            placeholder="Buscar en admin"
+            className="w-72 rounded-full border border-black/10 bg-white py-2 px-4 text-sm text-brand-text placeholder:text-brand-text/50 shadow-sm focus:border-[#1F3B67] focus:outline-none focus:ring-2 focus:ring-[#1F3B67]/30"
+            aria-label="Buscar productos en administracion"
+          />
+        </div>
 
         <div className="flex flex-col gap-8 md:flex-row lg:gap-12">
           <aside className="w-full flex-shrink-0 md:w-64 lg:w-72">

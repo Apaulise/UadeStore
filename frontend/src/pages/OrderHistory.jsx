@@ -1,13 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { formatOrderDate } from '../data/orders';
-import React, { useMemo, useState, useEffect } from 'react';
-import { formatOrderDate } from '../data/orders';
 import { usePendingOrder } from '../context/PendingOrderContext';
-
-// --- PASO 1 (MODIFICADO): Importar la API centralizada ---
-// Asegúrate de que la ruta sea correcta (el mismo problema de antes)
-import { OrdersAPI } from '../services/api.js'; 
-//import { useUser } from '@supabase/auth-helpers-react';
 
 // --- PASO 1 (MODIFICADO): Importar la API centralizada ---
 // Asegúrate de que la ruta sea correcta (el mismo problema de antes)
@@ -107,7 +100,6 @@ const OrderHistory = () => {
     }
     return combined;
   }, [orders, lastOrder]);
-  }, [orders, lastOrder]);
 
   const sortedOrders = useMemo(
     () =>
@@ -141,12 +133,10 @@ const OrderHistory = () => {
         <h1 className="text-3xl font-bold">Mis Compras</h1>
 
         {/* --- Input de búsqueda (sin cambios) --- */}
-        {/* --- Input de búsqueda (sin cambios) --- */}
         <div className="relative mt-6 w-full max-w-sm">
           <label className="sr-only" htmlFor="order-history-search">
             Buscar compra
           </label>
-          {/* ... (el resto del input y el ícono de SVG va aquí) ... */}
           {/* ... (el resto del input y el ícono de SVG va aquí) ... */}
           <input
             id="order-history-search"
@@ -168,29 +158,13 @@ const OrderHistory = () => {
             <strong>Error:</strong> {error}
           </div>
         ) : filteredOrders.length === 0 ? (
-        {/* --- Lógica de Carga / Error / Lista (sin cambios) --- */}
-        {isLoading ? (
-          <div className="mt-12 rounded-2xl p-8 text-center text-sm text-brand-text/70">
-            Cargando tu historial de compras... ⏳
-          </div>
-        ) : error ? (
-          <div className="mt-12 rounded-2xl border border-red-400 bg-red-100 p-8 text-center text-sm text-red-700">
-            <strong>Error:</strong> {error}
-          </div>
-        ) : filteredOrders.length === 0 ? (
           <div className="mt-12 rounded-2xl border border-dashed border-brand-blue/40 bg-white p-8 text-center text-sm text-brand-text/70">
-             {query.trim() 
-               ? 'No hay compras que coincidan con tu búsqueda.' 
-               : 'Aún no tienes compras en tu historial.'
-            }
              {query.trim() 
                ? 'No hay compras que coincidan con tu búsqueda.' 
                : 'Aún no tienes compras en tu historial.'
             }
           </div>
         ) : (
-          // --- ✅ BLOQUE CORREGIDO ---
-          // Aquí restauramos tu JSX original para el .map()
           // --- ✅ BLOQUE CORREGIDO ---
           // Aquí restauramos tu JSX original para el .map()
           <div className="mt-10 space-y-8">
@@ -201,12 +175,10 @@ const OrderHistory = () => {
               >
                 <header className="border-b border-black/10 bg-white/40 px-6 py-4 text-sm font-semibold uppercase tracking-wide text-brand-text/70">
                   {/* Asumiendo que tu API devuelve 'createdAt' o 'created_at' y tu 'adapter' lo mapea a 'createdAt' */}
-                  {/* Asumiendo que tu API devuelve 'createdAt' o 'created_at' y tu 'adapter' lo mapea a 'createdAt' */}
                   {formatOrderDate(order.createdAt)}
                 </header>
 
                 <ul className="divide-y divide-black/10 bg-[#EFE7DE]">
-                  {/* Asumiendo que tu API devuelve 'items' */}
                   {/* Asumiendo que tu API devuelve 'items' */}
                   {order.items?.map((item, index) => (
                     <li

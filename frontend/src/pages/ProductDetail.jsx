@@ -442,8 +442,8 @@ const sizeOptions = useMemo(() => {
                       onClick={() => setSelectedSize(option.value)}
                       className={`min-w-10 rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
                         (selectedSize ?? null) === (option.value ?? null)
-                          ? "border-brand-blue bg-brand-blue text-white"
-                          : "border-black/15 bg-white text-brand-text hover:border-brand-blue/60"
+                          ? "border-[#1F3B67] bg-white text-brand-text"
+                          : "border-black/15 bg-white text-brand-text hover:border-[#1F3B67]"
                       } ${option.available ? "" : "cursor-not-allowed opacity-50"}`}
                       disabled={!option.available}
                     >
@@ -484,10 +484,11 @@ const sizeOptions = useMemo(() => {
               type="button"
               onClick={handleAddToCart}
               disabled={isAddDisabled}
-              className="w-full rounded-full py-3 text-lg font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: isAddDisabled ? "#9AA3B5" : "#1F3B67",
-              }}
+              className={`w-full rounded-full border-2 py-3 text-lg font-semibold transition disabled:cursor-not-allowed ${
+                isAddDisabled
+                  ? "border-[#1F3B67] bg-[#1F3B67] text-white"
+                  : "border-[#1F3B67] bg-[#1F3B67] text-white hover:bg-transparent hover:text-[#1F3B67]"
+              }`}
             >
               {isAddDisabled ? "Sin stock" : "Agregar al carrito"}
             </button>

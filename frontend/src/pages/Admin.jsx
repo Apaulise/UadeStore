@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
+import { useLocation, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
 import { toast } from "react-hot-toast";
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "../components/layout/ProductCard";
@@ -66,9 +66,6 @@ const Admin = () => {
   const [colorsCatalog, setColorsCatalog] = useState([]);
   const [sizesCatalog, setSizesCatalog] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // --- CAMBIO 2: Inicializa hooks ---
-  const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
 

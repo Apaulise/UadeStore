@@ -9,7 +9,7 @@ import { OrdersAPI } from '../services/api.js';
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'ARS',
   minimumFractionDigits: 2,
 });
 
@@ -50,7 +50,7 @@ const OrderHistory = () => {
         const adaptedOrders = dataFromApi.map(order => ({
           id: order.id,
           createdAt: order.created_at, // Backend 'created_at' -> 'createdAt'
-          total: order.total,
+          total: order.total_compra,
           
           // Mapeamos los 'purchase_items' anidados
           items: order.Item_compra.map(item => {
@@ -61,7 +61,7 @@ const OrderHistory = () => {
               quantity: item.cantidad,
               price: item.subtotal, 
               name: item.Stock.Articulo.Titulo,
-              image: item.Stock.Articulo.Imagen[0],
+              image: item.Stock.Articulo.Imagen[0].imagen,
               size: item.Stock.talle,
               color: item.Stock.Color.nombre,
             };
@@ -215,7 +215,7 @@ const OrderHistory = () => {
                       </div>
                       <span className="text-sm font-semibold text-brand-text">
                         {currencyFormatter.format(
-                          (Number(item.price) || 0) * (item.quantity || 1),
+                          (Number(item.price) || 0) ,
                         )}
                       </span>
                     </li>

@@ -230,19 +230,66 @@ export const updateProductWithStock = async (productId, payload) => {
 };
 
 export const deleteProduct = async (productId) => {
-  const { error: stockError } = await supabase
-    .from('Stock')
-    .delete()
-    .eq('articulo_id', productId);
+  try {
+    // 1. Find all Stock IDs associated with the Articulo
+    const { data: stockItems, error: stockFetchError } = await supabase
+      .from('Stock')
+      .select('id') // Select only the IDs
+      .eq('articulo_id', productId);
 
-  if (stockError) throw new Error(stockError.message);
+    if (stockFetchError) throw new Error(`Error fetching stock IDs: ${stockFetchError.message}`);
 
-  const { error: articleError } = await supabase
-    .from('Articulo')
-    .delete()
-    .eq('id', productId);
+    const stockIds = stockItems.map(item => item.id);
 
-  if (articleError) throw new Error(articleError.message);
+    // Only proceed if there are stock items (optional, prevents unnecessary deletes)
+    if (stockIds.length > 0) {
+      // 2. Delete related entries in Carrito
+      const { error: carritoError } = await supabase
+        .from('Carrito')
+        .delete()
+        .in('stock_id', stockIds); // Delete where stock_id is one of the found IDs
 
-  return true;
+      if (carritoError) throw new Error(`Error deleting from Carrito: ${carritoError.message}`);
+
+      // 3. Delete related entries in Item_compra
+      const { error: itemCompraError } = await supabase
+        .from('Item_compra')
+        .delete()
+        .in('stock_id', stockIds); // Delete where stock_id is one of the found IDs
+
+      if (itemCompraError) throw new Error(`Error deleting from Item_compra: ${itemCompraError.message}`);
+
+      // 4. Delete Stock entries
+      const { error: stockError } = await supabase
+        .from('Stock')
+        .delete()
+        .eq('articulo_id', productId); // Or use .in('id', stockIds)
+
+      if (stockError) throw new Error(`Error deleting Stock: ${stockError.message}`);
+    }
+
+    // 5. Delete Imagen entries
+    const { error: imageError } = await supabase
+      .from('Imagen')
+      .delete()
+      .eq('articulo_id', productId);
+
+    if (imageError) throw new Error(`Error deleting Imagen: ${imageError.message}`);
+
+    // 6. Finally, delete the Articulo
+    const { error: articleError } = await supabase
+      .from('Articulo')
+      .delete()
+      .eq('id', productId);
+
+    if (articleError) throw new Error(`Error deleting Articulo: ${articleError.message}`);
+
+    console.log(`Successfully deleted Articulo ${productId} and related data.`);
+    return true;
+
+  } catch (error) {
+    console.error("Deletion failed:", error);
+    // Re-throw the error so the calling function knows it failed
+    throw error; 
+  }
 };

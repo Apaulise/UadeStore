@@ -82,19 +82,33 @@ const Catalog = () => {
     fetchProducts();
   }, []);
 
-  useEffect(() => {
-    const q = searchParams.get("q") || "";
-    const categoryParam = searchParams.get("categoria");
-    const normalizedCategory = resolveCategory(categoryParam);
+// useEffect for syncing URL
+useEffect(() => {
+  console.log("--- URL Sync Effect Triggered ---");
+  const q = searchParams.get("q") || "";
+  const categoryParam = searchParams.get("categoria"); // SLUG or null
+  console.log("1. Slug from URL ('categoria'):", categoryParam);
 
-    setFilters((prev) => ({
-      ...prev,
-      query: q,
-      category: normalizedCategory,
-      colors: prev.category === normalizedCategory ? prev.colors : [],
-      sizes: prev.category === normalizedCategory ? prev.sizes : [],
-    }));
-  }, [searchParams]);
+  const canonicalCategory = resolveCategory(categoryParam); // NAME or null
+  console.log("2. Resolved Canonical Name:", canonicalCategory);
+
+  setFilters((prev) => {
+    // Only update state IF the resolved category from URL differs from current state OR the query differs
+    if (prev.category !== canonicalCategory || prev.query !== q) {
+       console.log("Updating filters state needed. Prev:", prev.category, "| Next:", canonicalCategory);
+       return {
+         ...prev,
+         query: q,
+         category: canonicalCategory, // Set based on URL read
+         colors: prev.category !== canonicalCategory ? [] : prev.colors, // Reset only on actual change
+         sizes: prev.category !== canonicalCategory ? [] : prev.sizes,   // Reset only on actual change
+       };
+    }
+    
+    console.log("No filters state update needed for URL sync.");
+    return prev; // Prevent update if state already matches URL derived values
+  });
+}, [searchParams]); // Correct dependency
 
   useEffect(() => {
     let products = [...allProducts];

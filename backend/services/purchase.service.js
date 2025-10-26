@@ -39,6 +39,44 @@ export const createNewPurchase = async (purchaseData) => {
     throw new Error('Error al guardar los detalles de la orden.');
   }
 
+ try {
+    for (const item of items) {
+      // 1. Obtener el stock actual (Necesario para calcular el nuevo stock en JS)
+      const { data: currentStockData, error: fetchError } = await supabase
+        .from('Stock')
+        .select('stock')
+        .eq('id', item.stockId)
+        .single();
+
+      if (fetchError || !currentStockData) {
+         throw new Error(`No se pudo obtener el stock actual para stockId ${item.stockId}. Details: ${fetchError?.message}`);
+      }
+      
+      const currentStockValue = currentStockData.stock;
+      const purchasedQuantity = item.quantity;
+      const newStock = currentStockValue - purchasedQuantity;
+      const { error: updateError } = await supabase
+        .from('Stock')
+        .update({ stock: newStock }) // Actualiza con el valor calculado
+        .eq('id', item.stockId);
+
+      if (updateError) {
+        // Si la actualización de stock falla, idealmente deberías revertir toda la transacción
+        // (Borrar Compra e Item_compra). Esto es complejo sin RPC.
+        console.error(`Error actualizando stock para stockId ${item.stockId}:`, updateError);
+        throw new Error(`Fallo al actualizar el stock para uno de los items. Details: ${updateError.message}`);
+      }
+       console.log(`[OrderService] Stock actualizado para stockId ${item.stockId}: ${currentStockValue} -> ${newStock}`);
+    }
+  } catch (stockUpdateError) {
+      // Si cualquier actualización de stock falla, intentamos revertir todo
+      console.error("Error durante la actualización de stock, intentando revertir...", stockUpdateError);
+      await supabase.from('Item_compra').delete().eq('compra_id', compraId);
+      await supabase.from('Compra').delete().eq('id', compraId);
+      // Re-lanzamos el error para que el controlador lo maneje
+      throw stockUpdateError; 
+  }
+
   // --- (Futuro Paso) Enviar evento a RabbitMQ ---
   // const eventPayload = { orderId: compraId, userId, timestamp: new Date() };
   // publishOrderCreatedEvent(eventPayload);

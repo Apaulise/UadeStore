@@ -3,34 +3,39 @@ import remeraUadeImg from "../assets/remerauade.jpg";
 import logouadeImg from "../assets/logouade.jpg";
 import tiendaExteriorImg from "../assets/exterioruade.jpg";
 
-export const CATEGORY_ALIASES = {
-  bestsellers: "Bestsellers",
-  "nuestros-basicos": "Nuestros Basicos",
-  "nuestros basicos": "Nuestros Basicos",
-  "nuestros_basicos": "Nuestros Basicos",
-  accesorios: "Accesorios",
-  libreria: "Libreria",
+export const CATEGORY_SLUGS = {
+  "NUESTROS BASICOS": "nuestros-basicos",
+  "BESTSELLERS": "bestsellers",
+  "ACCESORIO": "accesorios",
+  "LIBRERIA": "libreria",
+  "ROPA": "ropa", // Add if ROPA is a distinct category from the API
 };
+
+// Map slugs AND lowercase API values back to canonical names
+const SLUG_OR_API_TO_CANONICAL = {
+  // Slugs
+  "nuestros-basicos": "NUESTROS BASICOS",
+  "bestsellers": "BESTSELLERS",
+  "accesorios": "ACCESORIO",
+  "libreria": "LIBRERIA",
+  "ropa": "ROPA",
+  // Lowercase API values (might overlap with slugs)
+  "nuestros basicos": "NUESTROS BASICOS", // Handle potential spaces from API
+  "accesorio": "ACCESORIO",
+  // Add other potential lowercase variants if needed
+};  
 
 export const resolveCategory = (value) => {
   if (!value) return null;
-  const normalized = value
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/\s+|_/g, "-");
-  return CATEGORY_ALIASES[normalized] ?? value;
+  const normalized = value.toString().trim().toLowerCase().replace(/_/g, "-"); // Normalize spaces/underscores
+  return SLUG_OR_API_TO_CANONICAL[normalized] ?? value.toString().trim().toUpperCase(); // Fallback to uppercase
 };
 
+// Takes a canonical name (e.g., "ACCESORIO") and returns its slug
 export const categoryToSlug = (value) => {
   if (!value) return "";
-  const resolved = resolveCategory(value);
-  const lower = resolved.toString().trim().toLowerCase();
-  const match = Object.entries(CATEGORY_ALIASES).find(
-    ([, label]) => label.toLowerCase() === lower
-  );
-  if (match) return match[0];
-  return lower.replace(/\s+/g, "-");
+  const canonicalName = resolveCategory(value); // Ensure we have the canonical name
+  return CATEGORY_SLUGS[canonicalName] ?? canonicalName.toLowerCase().replace(/\s+/g, "-"); // Fallback slug
 };
 
 const hoodieDetails = [

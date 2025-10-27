@@ -106,7 +106,14 @@ const Header = () => {
       const q = (query || "").trim();
 
       const basePath = isAdminPath ? "/admin" : "/catalogo";
-      const targetSearch = q ? `?q=${encodeURIComponent(q)}` : "";
+      // Si no hay término de búsqueda y la URL ya tiene filtros (p.ej., categoria),
+      // no sobrescribimos los parámetros existentes.
+      if (!q && location.search && new URLSearchParams(location.search).has("categoria")) {
+        return;
+      }
+      const params = new URLSearchParams(location.search);
+      if (q) params.set("q", q); else params.delete("q");
+      const targetSearch = params.toString() ? `?${params.toString()}` : "";
       const target = `${basePath}${targetSearch}`;
 
       if (location.pathname !== basePath || location.search !== targetSearch) {
@@ -115,7 +122,7 @@ const Header = () => {
       }
     }, 250);
     return () => clearTimeout(id);
-  }, [query, location.pathname, navigate]);
+  }, [query, location.pathname, navigate, location.search]);
 
   const onSubmitSearch = (e) => {
     e.preventDefault();
@@ -124,8 +131,11 @@ const Header = () => {
     // Esta lógica está bien, al hacer "Enter" sí queremos navegar
     const isAdminPath = location.pathname.startsWith("/admin");
     const basePath = isAdminPath ? "/admin" : "/catalogo";
-    const target = q ? `${basePath}?q=${encodeURIComponent(q)}` : basePath;
-    
+    const params = new URLSearchParams(location.search);
+    if (q) params.set("q", q); else params.delete("q");
+    const targetSearch = params.toString() ? `?${params.toString()}` : "";
+    const target = `${basePath}${targetSearch}`;
+
     navigate(target);
     setIsSearchOpen(false);
   };

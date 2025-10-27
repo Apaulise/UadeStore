@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import logoUade from "../../assets/logouadestore.png";
+import logoUade from "../../assets/logouadeNegro.png";
 import { useCart } from "../../context/CartContext";
 
 const navItems = [

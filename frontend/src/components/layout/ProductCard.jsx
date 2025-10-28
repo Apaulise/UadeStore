@@ -3,6 +3,13 @@ import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useCart } from "../../context/CartContext";
 
+
+const currencyFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS', 
+  minimumFractionDigits: 2,
+});
+
 const EditIcon = (props) => (
   <svg
     {...props}
@@ -91,7 +98,7 @@ const ProductCard = ({ product, variant = "catalog", onEdit }) => {
         <div className="flex flex-col items-center">
           <h3 className="text-lg font-semibold text-brand-text">{product.name}</h3>
           <p className="text-xl font-bold text-brand-text">
-            ${Number(product.price ?? 0).toFixed(2)}
+            {currencyFormatter.format(product.price)}
           </p>
           {Array.from(
             new Map(

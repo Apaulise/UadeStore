@@ -19,8 +19,6 @@ import * as purchaseService from '../services/purchase.service.js';
   }
 };
 
-
-
 export const getPurchaseHistoryController = async (req, res) => {
   try {
     const { userId } = req.query;

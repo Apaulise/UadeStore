@@ -118,6 +118,12 @@ const SizeGuideModal = ({ open, onClose }) => {
   );
 };
 
+const currencyFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS', 
+  minimumFractionDigits: 2,
+});
+
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -376,7 +382,7 @@ const sizeOptions = useMemo(() => {
               </span>
               <h1 className="mt-2 text-4xl font-extrabold text-brand-text">{product.name}</h1>
               <p className="mt-3 text-2xl font-semibold text-brand-text">
-                ${product.price.toFixed(2)}
+                {currencyFormatter.format(product.price)}
               </p>
             </header>
 

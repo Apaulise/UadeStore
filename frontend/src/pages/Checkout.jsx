@@ -68,23 +68,29 @@ const Checkout = () => {
     console.info('Enviando orden a la APIIIII:', orderPayload);
 
     try {
-      // --- LLAMADA REAL A LA API ---
-      const response = await OrdersAPI.create(orderPayload);
-      console.log('Respuesta de la API:', response.data); // Loguea la respuesta
+        const response = await OrdersAPI.create(orderPayload);
+        const orderData = response.data; // Ya sabemos que esto funciona
 
-      // Si la API responde OK, procedemos como antes
-      setLastOrder(response.data.data); // Guarda la orden creada (puede necesitar ajuste según la respuesta real)
-      clear(); // Llama a la función para vaciar el carrito (que llama a la API del carrito)
-      toast.success('Compra realizada con éxito');
-      navigate('/checkout/exito');
+        // 1. Guarda la orden en el contexto (no hace daño)
+        setLastOrder(orderData); 
 
-    } catch (err) {
-      console.error("Error al crear la orden:", err);
-      //setError(err.response?.data?.message || err.message || 'No se pudo procesar el pago.');
-      toast.error(err.response?.data?.message || 'Error al procesar el pago');
-    } finally {
-      setIsProcessing(false);
-    }
+        // 2. ¡LA SOLUCIÓN! Guarda la orden en el Session Storage
+        // Lo guardamos como string, por eso usamos JSON.stringify
+        sessionStorage.setItem('lastOrder', JSON.stringify(orderData));
+
+        // 3. Limpia el carrito
+        await clear(); 
+        
+        toast.success('Compra realizada con éxito');
+
+        // 4. Navega (ya no necesitas pasar el state aquí)
+        navigate('/checkout/exito', { replace: true });
+     } catch (err) {
+        console.error("Error al crear la orden:", err);
+        toast.error(err.response?.data?.message || 'Error al procesar el pago');
+      } finally {
+        setIsProcessing(false);
+      }
   };
 
   return (

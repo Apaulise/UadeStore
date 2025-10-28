@@ -49,7 +49,7 @@ const ProductCard = ({ product, variant = "catalog", onEdit }) => {
     try {
       await addItem({ stockId: defaultVariant.stockId, quantity: 1 });
       toast.success("Producto agregado al carrito");
-    } catch (err) {
+    } catch (error) {
       toast.error("No se pudo agregar al carrito");
     }
   };
@@ -122,13 +122,7 @@ const ProductCard = ({ product, variant = "catalog", onEdit }) => {
 
       {variant === "catalog" && (
         <div className="mt-4 flex justify-center">
-          <button
-            onClick={handleQuickAdd}
-            disabled={!defaultVariant?.available}
-            className="w-full rounded-lg border-2 border-[#1F3B67] bg-[#1F3B67] py-2 font-semibold text-white transition hover:bg-transparent hover:text-[#1F3B67] disabled:cursor-not-allowed disabled:border-[#1F3B67] disabled:bg-[#1F3B67] disabled:text-white"
-          >
-            Agregar al carrito
-          </button>
+          
         </div>
       )}
     </div>

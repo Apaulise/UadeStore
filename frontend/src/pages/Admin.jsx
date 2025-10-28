@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
+import { useLocation, useNavigate } from "react-router-dom"; // <-- CAMBIO 1
 import { toast } from "react-hot-toast";
 import ProductCard from "../components/layout/ProductCard";
 import ProductEditModal from "../components/admin/ProductEditModal";

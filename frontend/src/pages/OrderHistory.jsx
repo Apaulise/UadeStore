@@ -8,9 +8,9 @@ import { OrdersAPI } from '../services/api.js';
 //import { useUser } from '@supabase/auth-helpers-react';
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
+  style: 'currency',
+  currency: 'ARS',
+  minimumFractionDigits: 2,
 });
 
 const OrderHistory = () => {
@@ -41,49 +41,42 @@ useEffect(() => {
     try {
       const dataFromApi = await OrdersAPI.mine(userId);
 
-      // --- BLOQUE DE ADAPTACIÓN CORREGIDO ---
-      const adaptedOrders = dataFromApi.map(order => {
-        
-        // ✅ CORRECCIÓN: Usamos el campo directo de la API y lo convertimos a número
-        const orderTotal = Number(order.total_compra) || 0; 
-        
-        // Mapeamos los 'purchase_items' anidados
-        const mappedItems = order.Item_compra.map(item => {
-          
-          const imageUrl = item.Stock.Articulo.Imagen?.[0]?.imagen ?? null;
-          
-          const itemQuantity = Number(item.cantidad) || 1; 
-          const itemSubtotal = Number(item.subtotal) || 0; 
-          const unitPrice = itemSubtotal / itemQuantity; 
+        console.log('Datos recibidos de la API:', dataFromApi);
 
-          return {
-            id: item.id,
-            quantity: itemQuantity,
-            price: unitPrice, 
-            name: item.Stock.Articulo.Titulo,
-            image: imageUrl, 
-            size: item.Stock.talle,
-            color: item.Stock.Color.nombre,
-          };
-        });
-
-        return {
+        // --- PASO 3: "Aplanar" y "Traducir" los datos ---
+        // Este es el "traductor" que convierte la respuesta
+        // anidada del backend a lo que tu JSX espera.
+        const adaptedOrders = dataFromApi.map(order => ({
           id: order.id,
-          createdAt: order.created_at,
-          total: orderTotal, // Asignamos el total_compra de la API
-          items: mappedItems,
-        };
-      });
-      // --- FIN DEL BLOQUE DE ADAPTACIÓN CORREGIDO ---
+          createdAt: order.created_at, // Backend 'created_at' -> 'createdAt'
+          total: order.total_compra,
+          
+          // Mapeamos los 'purchase_items' anidados
+          items: order.Item_compra.map(item => {
+            // Sacamos el artículo de la estructura anidada
+            
+            return {
+              id: item.id,
+              quantity: item.cantidad,
+              price: item.subtotal, 
+              name: item.Stock.Articulo.Titulo,
+              image: item.Stock.Articulo.Imagen[0].imagen,
+              size: item.Stock.talle,
+              color: item.Stock.Color.nombre,
+            };
+          })
+        }));
 
-      setOrders(adaptedOrders);
-    } catch (err) {
-      console.error('Falló el fetchOrders:', err);
-      setError(err.message || 'Ocurrió un error inesperado.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setOrders(adaptedOrders); // Guardamos los datos adaptados
+
+      } catch (err) {
+        console.error('Falló el fetchOrders:', err);
+        // La función 'http' de tu api.js ya formatea bien el error
+        setError(err.message || 'Ocurrió un error inesperado.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   fetchOrders();
 }, [userId]);
@@ -184,49 +177,49 @@ useEffect(() => {
                   {formatOrderDate(order.createdAt)}
                 </header>
 
-                <ul className="divide-y divide-black/10 bg-[#EFE7DE]">
-                  {/* Asumiendo que tu API devuelve 'items' */}
-                  {order.items?.map((item, index) => (
-                    <li
-                      key={`${order.id}-${item.id}-${index}`}
-                      className="flex items-center justify-between gap-4 px-6 py-4"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-white shadow">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] text-brand-text/50">
-                              Sin imagen
-                            </div>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-brand-text">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-brand-text/70">
-                            {item.color ?? 'Color: N/A'}
-                          </p>
-                          <p className="text-xs text-brand-text/70">
-                            Cantidad: {item.quantity}
-                            {item.size ? ` · Talle: ${item.size}` : ''}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold text-brand-text">
-                        {currencyFormatter.format(
-                          (Number(item.price) || 0) * (item.quantity || 1),
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <ul className="divide-y divide-black/10 bg-[#EFE7DE]">
+                  {/* Asumiendo que tu API devuelve 'items' */}
+                  {order.items?.map((item, index) => (
+                    <li
+                      key={`${order.id}-${item.id}-${index}`}
+                      className="flex items-center justify-between gap-4 px-6 py-4"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-white shadow">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] text-brand-text/50">
+                              Sin imagen
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-brand-text">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-brand-text/70">
+                            {item.color ?? 'Color: N/A'}
+                          </p>
+                          <p className="text-xs text-brand-text/70">
+                            Cantidad: {item.quantity}
+                            {item.size ? ` · Talle: ${item.size}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-brand-text">
+                        {currencyFormatter.format(
+                          (Number(item.price) || 0) ,
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
                 <footer className="flex items-center justify-between bg-white px-6 py-4 text-sm font-semibold text-brand-text">
                   <span>Total:</span>

@@ -12,19 +12,31 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
 
 const CheckoutSuccess = () => {
   const navigate = useNavigate();
-  const { lastOrder, clearLastOrder } = usePendingOrder();
+  const { clearLastOrder } = usePendingOrder();
 
-  const order = lastOrder ?? {
-    pickupDate: '01/07/2025',
+  // ¡AQUÍ LEEMOS LOS DATOS!
+  // 1. Intenta leer la orden desde sessionStorage
+  const orderString = sessionStorage.getItem('lastOrder');
+  
+  // 2. Convierte el string de vuelta a un objeto
+  const orderData = orderString ? JSON.parse(orderString) : null;
+
+  // 3. Usa los datos leídos o el fallback
+  const order = orderData ?? {
+    pickupDate: '01/11/2025',
     items: [],
     total: 0,
   };
 
   const handleBack = () => {
+    // ¡LIMPIEZA CRUCIAL!
+    // 1. Limpia el estado del contexto
     clearLastOrder();
+    // 2. Limpia el sessionStorage para que esto no se vuelva a mostrar
+    sessionStorage.removeItem('lastOrder'); 
+    
     navigate('/catalogo');
   };
-
   return (
     <div className="bg-brand-cream min-h-[70vh] text-brand-text">
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-5 py-10 lg:flex-row lg:items-start lg:gap-12">

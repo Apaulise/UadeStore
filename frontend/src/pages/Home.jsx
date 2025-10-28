@@ -5,8 +5,8 @@ import termoUADE from "../assets/termoUADE.png";
 import remeraUadeImg from "../assets/remerauade.jpg";
 import buzoUadeImg from "../assets/buzouade.jpg";
 import bolsaUADE from "../assets/BolsaUADE.png";
-import tiendaInteriorImg from "../assets/StorePorDentro.png";
-import tiendaExteriorImg from "../assets/StorePorFuera.png";
+import tiendaInteriorImg from "../assets/TIENDAINTERIORUADE.png";
+import tiendaExteriorImg from "../assets/TIENDAEXTERIORUADE.png";
 import { Link } from "react-router-dom";
 import { categoryToSlug } from "../data/products";
 

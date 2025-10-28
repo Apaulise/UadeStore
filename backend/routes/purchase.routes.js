@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { createPurchaseController } from '../controllers/purchase.controller.js';
 import {getPurchaseHistoryController} from '../controllers/purchase.controller.js'
-import {getPurchaseHistoryController } from '../controllers/purchase.controller.js';
+
 
 const router = Router();
 

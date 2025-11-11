@@ -6,7 +6,21 @@ import { usePendingOrder } from '../context/PendingOrderContext';
 import { OrdersAPI } from '../services/api';
 
 const accentColor = '#1F3B67';
-const pickupDate = '01/07/2025';
+// Calcula fecha de retiro: dentro de 3 días hábiles
+const getBusinessDateFromNow = (businessDays = 3) => {
+  const d = new Date();
+  // Normalizar a mediodía para evitar saltos por huso horario
+  d.setHours(12, 0, 0, 0);
+  let remaining = businessDays;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    // 0 = domingo, 6 = sábado -> no son hábiles
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+const pickupDate = getBusinessDateFromNow(3);
 const availableBalance = 700;
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {

@@ -10,6 +10,19 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
   minimumFractionDigits: 2,
 });
 
+// Utilidad compartida: calcular fecha hábil a N días
+const getBusinessDateFromNow = (businessDays = 3) => {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  let remaining = businessDays;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
 const CheckoutSuccess = () => {
   const navigate = useNavigate();
   const { clearLastOrder } = usePendingOrder();
@@ -23,7 +36,7 @@ const CheckoutSuccess = () => {
 
   // 3. Usa los datos leídos o el fallback
   const order = orderData ?? {
-    pickupDate: '01/11/2025',
+    pickupDate: getBusinessDateFromNow(3),
     items: [],
     total: 0,
   };
@@ -65,9 +78,7 @@ const CheckoutSuccess = () => {
               </h2>
               <p className="text-sm text-brand-text/80">
                 El pedido estará listo el{' '}
-                <span className="font-semibold">
-                  {order.pickupDate ?? '01/07/2025'}
-                </span>
+                <span className="font-semibold">{order.pickupDate ?? getBusinessDateFromNow(3)}</span>
               </p>
             </div>
 

@@ -77,6 +77,16 @@ const Checkout = () => {
         // 2. ¡LA SOLUCIÓN! Guarda la orden en el Session Storage
         // Lo guardamos como string, por eso usamos JSON.stringify
         sessionStorage.setItem('lastOrder', JSON.stringify(orderData));
+        // Ajuste: construir resumen de la compra con los datos visibles del carrito
+        const successOrder = {
+          id: orderData?.id,
+          createdAt: orderData?.created_at,
+          pickupDate,
+          items: orderPreview,
+          total,
+        };
+        setLastOrder(successOrder);
+        sessionStorage.setItem('lastOrder', JSON.stringify(successOrder));
 
         // 3. Limpia el carrito
         await clear(); 

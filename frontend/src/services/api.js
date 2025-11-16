@@ -22,6 +22,11 @@ export const ProductsAPI = {
     return http(`/products${qs ? `?${qs}` : ""}`);
   },
   get: (id) => http(`/products/${id}`),
+  create: (payload) =>
+    http(`/products`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   update: (id, payload) =>
     http(`/products/${id}`, {
       method: "PUT",

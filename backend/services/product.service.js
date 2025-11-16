@@ -94,11 +94,93 @@ export const listSizes = async () => {
   return sizes;
 };
 
-export const updateArticulo = async (productId, { name, price, description }) => {
+export const createArticulo = async ({ name, price, description, category }) => {
+  // La columna `categoria` es NOT NULL y es un enum.
+  // Tomamos la categoría enviada desde el front si viene,
+  // si no, intentamos usar la de algún Articulo existente
+  // para garantizar que el valor pertenece al enum.
+  let categoria = category || null;
+
+  if (!categoria) {
+    const { data: existing, error: existingError } = await supabase
+      .from('Articulo')
+      .select('categoria')
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingError && existing?.categoria) {
+      categoria = existing.categoria;
+    } else {
+      // Fallback razonable si no hay artículos aún.
+      categoria = 'LIBRERIA';
+    }
+  }
+
+  const payload = {
+    Titulo: name ?? '',
+    precio: Number(price ?? 0),
+    descripcion: description ?? '',
+    categoria,
+  };
+
+  const { data, error } = await supabase
+    .from('Articulo')
+    .insert(payload)
+    .select('id')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data.id;
+};
+
+const createArticuloWithSafeId = async ({ name, price, description, category }) => {
+  let categoria = category || null;
+  let nextId = 1;
+
+  const { data: last, error: lastError } = await supabase
+    .from('Articulo')
+    .select('id, categoria')
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!lastError && last?.id != null) {
+    const parsed = Number(last.id);
+    nextId = Number.isFinite(parsed) ? parsed + 1 : 1;
+  }
+
+  if (!categoria) {
+    if (last?.categoria) {
+      categoria = last.categoria;
+    } else {
+      categoria = 'LIBRERIA';
+    }
+  }
+
+  const payload = {
+    id: nextId,
+    Titulo: name ?? '',
+    precio: Number(price ?? 0),
+    descripcion: description ?? '',
+    categoria,
+  };
+
+  const { data, error } = await supabase
+    .from('Articulo')
+    .insert(payload)
+    .select('id')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data.id;
+};
+
+export const updateArticulo = async (productId, { name, price, description, category }) => {
   const payload = {};
   if (name !== undefined) payload.Titulo = name;
   if (price !== undefined) payload.precio = Number(price);
   if (description !== undefined) payload.descripcion = description;
+  if (category !== undefined) payload.categoria = category;
 
   if (Object.keys(payload).length === 0) return null;
 
@@ -109,6 +191,58 @@ export const updateArticulo = async (productId, { name, price, description }) =>
 
   if (error) throw new Error(error.message);
   return true;
+};
+
+const upsertProductImage = async (productId, image) => {
+  // Si no se envía imagen (undefined), no tocamos nada.
+  if (image === undefined) return;
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('Imagen')
+    .select('id')
+    .eq('articulo_id', productId);
+
+  if (fetchError) throw new Error(fetchError.message);
+
+  const images = existing ?? [];
+
+  // Si la imagen viene vacía/null, borramos las existentes.
+  if (!image) {
+    if (images.length > 0) {
+      const idsToDelete = images.map((row) => row.id);
+      const { error: deleteError } = await supabase
+        .from('Imagen')
+        .delete()
+        .in('id', idsToDelete);
+      if (deleteError) throw new Error(deleteError.message);
+    }
+    return;
+  }
+
+  if (images.length === 0) {
+    const { error: insertError } = await supabase
+      .from('Imagen')
+      .insert({ articulo_id: productId, imagen: image });
+    if (insertError) throw new Error(insertError.message);
+    return;
+  }
+
+  const [first, ...rest] = images;
+
+  const { error: updateError } = await supabase
+    .from('Imagen')
+    .update({ imagen: image })
+    .eq('id', first.id);
+  if (updateError) throw new Error(updateError.message);
+
+  if (rest.length > 0) {
+    const idsToDelete = rest.map((row) => row.id);
+    const { error: cleanupError } = await supabase
+      .from('Imagen')
+      .delete()
+      .in('id', idsToDelete);
+    if (cleanupError) throw new Error(cleanupError.message);
+  }
 };
 
 const syncProductStock = async (productId, variants = []) => {
@@ -223,9 +357,19 @@ const syncProductStock = async (productId, variants = []) => {
   }
 };
 
+export const createProductWithStock = async (payload) => {
+  const safePayload = payload ?? {};
+  const productId = await createArticuloWithSafeId(safePayload);
+  await syncProductStock(productId, safePayload.stockItems ?? []);
+  await upsertProductImage(productId, safePayload.image);
+  return getArticuloById(productId);
+};
+
 export const updateProductWithStock = async (productId, payload) => {
-  await updateArticulo(productId, payload ?? {});
-  await syncProductStock(productId, payload?.stockItems ?? []);
+  const safePayload = payload ?? {};
+  await updateArticulo(productId, safePayload);
+  await syncProductStock(productId, safePayload.stockItems ?? []);
+  await upsertProductImage(productId, safePayload.image);
   return getArticuloById(productId);
 };
 

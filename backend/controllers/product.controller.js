@@ -1,5 +1,15 @@
 import * as productService from '../services/product.service.js';
 
+export const createProductController = async (req, res) => {
+  try {
+    const payload = req.body ?? {};
+    const product = await productService.createProductWithStock(payload);
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear el articulo', error: error.message });
+  }
+};
+
 export const getProductsController = async (req, res) => {
   try {
     const products = await productService.getAllArticulos();

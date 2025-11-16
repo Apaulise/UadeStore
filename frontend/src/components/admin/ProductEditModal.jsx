@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 import ColorPickerModal from "./ColorPickerModal";
 
@@ -46,7 +46,15 @@ const formatColorOption = (color) => ({
   hex: ensureHex(color.hexa ?? color.hex ?? "#1F3B67"),
 });
 
-export default function ProductEditModal({ product, colorsCatalog = [], sizesCatalog = [], onClose, onSave, onDelete }) {
+export default function ProductEditModal({
+  product,
+  colorsCatalog = [],
+  sizesCatalog = [],
+  categoryOptions = [],
+  onClose,
+  onSave,
+  onDelete,
+}) {
   const colorOptions = useMemo(() => {
     const list = colorsCatalog.length ? colorsCatalog.map(formatColorOption) : DEFAULT_COLORS;
     const unique = new Map();
@@ -69,6 +77,9 @@ export default function ProductEditModal({ product, colorsCatalog = [], sizesCat
       name: product.name ?? "",
       price: Number(product.price ?? 0),
       description: product.description ?? "",
+      // si el producto ya tiene categoría, la usamos;
+      // si no, tomamos la primera opción disponible o cadena vacía.
+      category: product.category ?? categoryOptions[0] ?? "",
     });
 
     const mappedVariants = (product.stockItems ?? []).map((item) =>
@@ -83,7 +94,7 @@ export default function ProductEditModal({ product, colorsCatalog = [], sizesCat
 
     setVariants(mappedVariants.length ? mappedVariants : [createVariant()]);
     setActiveTab("details");
-  }, [product]);
+  }, [product, categoryOptions]);
 
   if (!product || !form) return null;
 
@@ -110,8 +121,9 @@ export default function ProductEditModal({ product, colorsCatalog = [], sizesCat
         size: variant.size || null,
         stock: Number.isFinite(Number(variant.stock)) ? Number(variant.stock) : 0,
       }))
-      .filter((variant) =>
-        variant.colorName || variant.size || Number(variant.stock) > 0 || variant.id
+      .filter(
+        (variant) =>
+          variant.colorName || variant.size || Number(variant.stock) > 0 || variant.id
       );
 
     onSave?.({
@@ -153,140 +165,170 @@ export default function ProductEditModal({ product, colorsCatalog = [], sizesCat
 
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
-          {activeTab === "details" ? (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-brand-text">Nombre</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-brand-text">Precio</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(event) => setForm((prev) => ({ ...prev, price: event.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-brand-text">Descripción</label>
-                <textarea
-                  rows={5}
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <header className="flex items-center justify-between text-xs font-semibold uppercase text-gray-500">
-                <span className="w-1/3">Color</span>
-                <span className="w-1/4">Talle</span>
-                <span className="w-1/4">Stock Disp.</span>
-                <span className="w-10" />
-              </header>
+            {activeTab === "details" ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-semibold text-brand-text">Nombre</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                  />
+                </div>
 
-              <div className="space-y-3">
-                {variants.map((variant) => (
-                  <div
-                    key={variant.key}
-                    className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2"
+                <div>
+                  <label className="text-sm font-semibold text-brand-text">Categoría</label>
+                  <select
+                    value={form.category || ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, category: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                   >
-                    <div className="flex w-1/3 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setColorPickerRow(variant.key)}
-                        className="h-8 w-8 rounded-full border"
-                        style={{ backgroundColor: variant.hex }}
-                        aria-label="Cambiar color"
-                        title="Cambiar color manualmente"
-                      />
+                    <option value="">Seleccionar categoría</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-brand-text">Precio</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.price}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, price: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-brand-text">Descripción</label>
+                  <textarea
+                    rows={5}
+                    value={form.description}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <header className="flex items-center justify-between text-xs font-semibold uppercase text-gray-500">
+                  <span className="w-1/3">Color</span>
+                  <span className="w-1/4">Talle</span>
+                  <span className="w-1/4">Stock Disp.</span>
+                  <span className="w-10" />
+                </header>
+
+                <div className="space-y-3">
+                  {variants.map((variant) => (
+                    <div
+                      key={variant.key}
+                      className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2"
+                    >
+                      <div className="flex w-1/3 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setColorPickerRow(variant.key)}
+                          className="h-8 w-8 rounded-full border"
+                          style={{ backgroundColor: variant.hex }}
+                          aria-label="Cambiar color"
+                          title="Cambiar color manualmente"
+                        />
+                        <select
+                          value={variant.colorName || ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            const option = colorOptions.find(
+                              (opt) => opt.label.toLowerCase() === value.toLowerCase()
+                            );
+                            updateVariant(variant.key, {
+                              colorName: value,
+                              hex: option ? option.hex : variant.hex,
+                            });
+                          }}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                        >
+                          <option value="">Color</option>
+                          {colorOptions.map((option) => (
+                            <option key={option.label} value={option.label}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <select
-                        value={variant.colorName || ""}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          const option = colorOptions.find(
-                            (opt) => opt.label.toLowerCase() === value.toLowerCase()
-                          );
-                          updateVariant(variant.key, {
-                            colorName: value,
-                            hex: option ? option.hex : variant.hex,
-                          });
-                        }}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                        value={variant.size || ""}
+                        onChange={(event) =>
+                          updateVariant(variant.key, { size: event.target.value })
+                        }
+                        className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                       >
-                        <option value="">Color</option>
-                        {colorOptions.map((option) => (
-                          <option key={option.label} value={option.label}>
-                            {option.label}
+                        <option value="">Talle</option>
+                        {sizesCatalog.map((sz) => (
+                          <option key={sz} value={sz}>
+                            {sz}
                           </option>
                         ))}
                       </select>
+
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.stock}
+                        onChange={(event) =>
+                          updateVariant(variant.key, { stock: event.target.value })
+                        }
+                        placeholder="Cantidad"
+                        className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(variant.key)}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 hover:bg-red-50"
+                        aria-label="Eliminar variante"
+                      >
+                        <FaTrash size={12} />
+                      </button>
                     </div>
+                  ))}
+                </div>
 
-                    <select
-                      value={variant.size || ""}
-                      onChange={(event) => updateVariant(variant.key, { size: event.target.value })}
-                      className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                    >
-                      <option value="">Talle</option>
-                      {sizesCatalog.map((sz) => (
-                        <option key={sz} value={sz}>
-                          {sz}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="number"
-                      min="0"
-                      value={variant.stock}
-                      onChange={(event) => updateVariant(variant.key, { stock: event.target.value })}
-                      placeholder="Cantidad"
-                      className="w-1/4 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(variant.key)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 hover:bg-red-50"
-                      aria-label="Eliminar variante"
-                    >
-                      <FaTrash size={12} />
-                    </button>
-                  </div>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setVariants((prev) => [...prev, createVariant()])}
+                  className="flex items-center gap-2 rounded-full border border-[#1F3B67] px-4 py-2 text-sm font-semibold text-[#1F3B67] transition hover:bg-[#1F3B67]/10"
+                >
+                  <FaPlus size={12} /> Agregar variante
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setVariants((prev) => [...prev, createVariant()])}
-                className="flex items-center gap-2 rounded-full border border-[#1F3B67] px-4 py-2 text-sm font-semibold text-[#1F3B67] transition hover:bg-[#1F3B67]/10"
-              >
-                <FaPlus size={12} /> Agregar variante
-              </button>
-            </div>
-          )}
+            )}
           </div>
 
           <div className="flex items-center justify-between border-t px-6 py-4 bg-white flex-none">
-            <button
-              type="button"
-              onClick={() => onDelete?.(product)}
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-            >
-              Eliminar Producto
-            </button>
+            {onDelete && product?.id && (
+              <button
+                type="button"
+                onClick={() => onDelete(product)}
+                className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+              >
+                Eliminar Producto
+              </button>
+            )}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -308,7 +350,9 @@ export default function ProductEditModal({ product, colorsCatalog = [], sizesCat
 
       <ColorPickerModal
         isOpen={Boolean(colorPickerRow)}
-        initialHex={ensureHex(variants.find((variant) => variant.key === colorPickerRow)?.hex)}
+        initialHex={ensureHex(
+          variants.find((variant) => variant.key === colorPickerRow)?.hex
+        )}
         initialOpacity={1}
         onCancel={() => setColorPickerRow(null)}
         onApply={(hex) => {

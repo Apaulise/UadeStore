@@ -259,23 +259,58 @@ const Admin = () => {
     }));
   };
 
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(allProducts.map((product) => product.category).filter(Boolean))
+      ).sort(),
+    [allProducts]
+  );
+
 
   const openEditor = (product) => setEditingProduct(product);
   const closeEditor = () => setEditingProduct(null);
+  const openNewProductEditor = () =>
+    setEditingProduct({
+      id: null,
+      name: "",
+      price: 0,
+      description: "",
+      category: categoryOptions[0] || "",
+      image: null,
+      variants: [],
+      stockItems: [],
+    });
 
   const handleSaveProduct = async (payload) => {
     if (!editingProduct) return;
     try {
-      const response = await ProductsAPI.update(editingProduct.id, payload);
+      const isUpdate = Boolean(editingProduct.id);
+
+      // Aseguramos que siempre se envíe una categoría válida
+      const normalizedPayload = {
+        ...payload,
+        category: payload.category || editingProduct.category || categoryOptions[0] || "LIBRERIA",
+      };
+
+      const response = isUpdate
+        ? await ProductsAPI.update(editingProduct.id, normalizedPayload)
+        : await ProductsAPI.create(normalizedPayload);
       const mapped = mapProductFromApi(response);
-      setAllProducts((prev) =>
-        prev.map((product) => (product.id === mapped.id ? mapped : product))
+      setAllProducts((prev) => {
+        const exists = prev.some((product) => product.id === mapped.id);
+        if (exists) {
+          return prev.map((product) => (product.id === mapped.id ? mapped : product));
+        }
+        return [...prev, mapped];
+      });
+      toast.success(
+        isUpdate ? "Producto actualizado correctamente" : "Producto creado correctamente"
       );
-      toast.success("Producto actualizado correctamente");
       closeEditor();
     } catch (err) {
       console.error(err);
-      toast.error("Error al actualizar el producto");
+      toast.error("Error al guardar el producto");
     }
   };
 
@@ -314,7 +349,14 @@ const Admin = () => {
           Mostrando {filteredProducts.length} de {allProducts.length} productos.
         </p>
 
-        <div className="mb-8 flex items-center justify-end">
+        <div className="mb-8 flex items-center justify-end gap-4">
+          <button
+            type="button"
+            onClick={openNewProductEditor}
+            className="rounded-lg bg-[#1F3B67] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#16294A]"
+          >
+            Nuevo producto
+          </button>
           <input
             type="search"
             value={filters.query}
@@ -464,9 +506,10 @@ const Admin = () => {
         product={editingProduct}
         colorsCatalog={colorsCatalog}
         sizesCatalog={sizesCatalog}
+        categoryOptions={categoryOptions}
         onClose={closeEditor}
         onSave={handleSaveProduct}
-        onDelete={handleDeleteProduct}
+        onDelete={editingProduct?.id ? handleDeleteProduct : undefined}
       />
     </>
   );

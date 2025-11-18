@@ -37,11 +37,14 @@ export const ProductsAPI = {
 
 // Órdenes (lo que otros consumen de nosotros)
 export const OrdersAPI = {
-  mine: (userId = 1) => http(`/orders/me?userId=${userId}`), // MOCK userId
+  mine: ({ userId = 1, page = 1, limit = 5 } = {}) => {
+    const qs = new URLSearchParams({ userId, page, limit }).toString();
+    return http(`/purchases/me?${qs}`);
+  },
   create: ({ items, total, userId = 1 }) =>
-    http(`/orders?userId=${userId}`, {
+    http(`/purchases`, {
       method: "POST",
-      body: JSON.stringify({ items, total }),
+      body: JSON.stringify({ items, total, userId }),
     }),
 };
 

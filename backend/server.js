@@ -17,7 +17,7 @@ connectRabbitMQ();
 
 // Le decimos a la app que use nuestras rutas con un prefijo
 app.use('/api/products', productRoutes);
-app.use('/api/orders', purchaseRoutes);
+app.use('/api/purchases', purchaseRoutes);
 app.use('/api/cart', cartRoutes);
 
 const PORT = process.env.PORT || 3001;

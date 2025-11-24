@@ -139,6 +139,8 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
+  const showSizeFeatures = product?.category === "NUESTROS BASICOS";
+
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -150,7 +152,7 @@ const ProductDetail = () => {
 
         const defaultVariant = mapped.variants.find((variant) => variant.available) ?? mapped.variants[0] ?? null;
         setSelectedColor(defaultVariant?.colorId ?? null);
-        setSelectedSize(defaultVariant?.size ?? null);
+        setSelectedSize(showSizeFeatures ? defaultVariant?.size ?? null : null);
         setQuantity(1);
         setSelectedImage(0);
       } catch (err) {
@@ -218,7 +220,7 @@ const ProductDetail = () => {
   }, [product, selectedSize]); 
 
 const sizeOptions = useMemo(() => {
-    if (!product) return [];
+    if (!product || !showSizeFeatures) return [];
     const map = new Map();
 
     // 1. Obtenemos TODOS los talles únicos primero, sin importar el stock o color
@@ -253,7 +255,7 @@ const sizeOptions = useMemo(() => {
     // 6. Devolvemos el array COMPLETO (ej: [S, M, L]) donde cada item
     // tiene su 'available' correcto.
     return Array.from(map.values());
-  }, [product, selectedColor]);
+  }, [product, selectedColor, showSizeFeatures]);
 
   const selectedVariant = useMemo(() => {
     if (!product) return null;
@@ -428,7 +430,7 @@ const sizeOptions = useMemo(() => {
               </div>
             )}
 
-            {sizeOptions.length > 0 && (
+            {showSizeFeatures && sizeOptions.length > 0 && (
               <div>
                 <div className="flex items-center gap-4">
                   <p className="text-sm font-semibold text-brand-text">Talle:</p>

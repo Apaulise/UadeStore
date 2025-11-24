@@ -193,9 +193,13 @@ export const updateArticulo = async (productId, { name, price, description, cate
   return true;
 };
 
-const upsertProductImage = async (productId, image) => {
-  // Si no se envía imagen (undefined), no tocamos nada.
-  if (image === undefined) return;
+const upsertProductImages = async (productId, imagesInput) => {
+  // No modificar imágenes si el campo no viene en el payload
+  if (imagesInput === undefined) return;
+
+  const urls = (imagesInput ?? [])
+    .map((url) => (url ?? '').toString().trim())
+    .filter(Boolean);
 
   const { data: existing, error: fetchError } = await supabase
     .from('Imagen')
@@ -204,45 +208,37 @@ const upsertProductImage = async (productId, image) => {
 
   if (fetchError) throw new Error(fetchError.message);
 
-  const images = existing ?? [];
+  const existingRows = existing ?? [];
+  const existingIds = existingRows.map((row) => row.id);
 
-  // Si la imagen viene vacía/null, borramos las existentes.
-  if (!image) {
-    if (images.length > 0) {
-      const idsToDelete = images.map((row) => row.id);
+  // Si no hay URLs, borrar todas
+  if (urls.length === 0) {
+    if (existingIds.length > 0) {
       const { error: deleteError } = await supabase
         .from('Imagen')
         .delete()
-        .in('id', idsToDelete);
+        .in('id', existingIds);
       if (deleteError) throw new Error(deleteError.message);
     }
     return;
   }
 
-  if (images.length === 0) {
-    const { error: insertError } = await supabase
-      .from('Imagen')
-      .insert({ articulo_id: productId, imagen: image });
-    if (insertError) throw new Error(insertError.message);
-    return;
-  }
-
-  const [first, ...rest] = images;
-
-  const { error: updateError } = await supabase
-    .from('Imagen')
-    .update({ imagen: image })
-    .eq('id', first.id);
-  if (updateError) throw new Error(updateError.message);
-
-  if (rest.length > 0) {
-    const idsToDelete = rest.map((row) => row.id);
-    const { error: cleanupError } = await supabase
+  // Siempre dejamos las imágenes en el orden recibido: borramos todas y reinsertamos
+  if (existingIds.length > 0) {
+    const { error: deleteError } = await supabase
       .from('Imagen')
       .delete()
-      .in('id', idsToDelete);
-    if (cleanupError) throw new Error(cleanupError.message);
+      .in('id', existingIds);
+    if (deleteError) throw new Error(deleteError.message);
   }
+
+  const insertPayload = urls.map((url) => ({
+    articulo_id: productId,
+    imagen: url,
+  }));
+
+  const { error: insertError } = await supabase.from('Imagen').insert(insertPayload);
+  if (insertError) throw new Error(insertError.message);
 };
 
 const syncProductStock = async (productId, variants = []) => {
@@ -361,7 +357,7 @@ export const createProductWithStock = async (payload) => {
   const safePayload = payload ?? {};
   const productId = await createArticuloWithSafeId(safePayload);
   await syncProductStock(productId, safePayload.stockItems ?? []);
-  await upsertProductImage(productId, safePayload.image);
+  await upsertProductImages(productId, safePayload.images);
   return getArticuloById(productId);
 };
 
@@ -369,7 +365,7 @@ export const updateProductWithStock = async (productId, payload) => {
   const safePayload = payload ?? {};
   await updateArticulo(productId, safePayload);
   await syncProductStock(productId, safePayload.stockItems ?? []);
-  await upsertProductImage(productId, safePayload.image);
+  await upsertProductImages(productId, safePayload.images);
   return getArticuloById(productId);
 };
 

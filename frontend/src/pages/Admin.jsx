@@ -35,6 +35,7 @@ const mapProductFromApi = (data) => {
     description: data.descripcion ?? "",
     category: data.categoria ?? "",
     image: data.Imagen?.[0]?.imagen ?? null,
+    images: (data.Imagen ?? []).map((img) => img.imagen).filter(Boolean),
     variants,
     defaultVariant,
     stockItems: variants.map((variant) => ({
@@ -278,6 +279,7 @@ const Admin = () => {
       description: "",
       category: categoryOptions[0] || "",
       image: null,
+      images: [],
       variants: [],
       stockItems: [],
     });
@@ -291,6 +293,7 @@ const Admin = () => {
       const normalizedPayload = {
         ...payload,
         category: payload.category || editingProduct.category || categoryOptions[0] || "LIBRERIA",
+        images: payload.images ?? [],
       };
 
       const response = isUpdate

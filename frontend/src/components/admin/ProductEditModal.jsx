@@ -69,6 +69,7 @@ export default function ProductEditModal({
   const [form, setForm] = useState(null);
   const [variants, setVariants] = useState([]);
   const [colorPickerRow, setColorPickerRow] = useState(null);
+  const [images, setImages] = useState([""]);
 
   useEffect(() => {
     if (!product) return;
@@ -81,6 +82,9 @@ export default function ProductEditModal({
       // si no, tomamos la primera opción disponible o cadena vacía.
       category: product.category ?? categoryOptions[0] ?? "",
     });
+
+    const incomingImages = (product.images ?? []).filter(Boolean);
+    setImages(incomingImages.length ? incomingImages : [""]);
 
     const mappedVariants = (product.stockItems ?? []).map((item) =>
       createVariant({
@@ -111,6 +115,23 @@ export default function ProductEditModal({
     });
   };
 
+  const updateImage = (index, value) => {
+    setImages((prev) => {
+      const copy = [...prev];
+      copy[index] = value;
+      return copy;
+    });
+  };
+
+  const addImageField = () => setImages((prev) => [...prev, ""]);
+
+  const removeImageField = (index) => {
+    setImages((prev) => {
+      const copy = prev.filter((_, i) => i !== index);
+      return copy.length ? copy : [""];
+    });
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const stockItems = variants
@@ -126,9 +147,14 @@ export default function ProductEditModal({
           variant.colorName || variant.size || Number(variant.stock) > 0 || variant.id
       );
 
+    const cleanedImages = images
+      .map((url) => (url ?? "").toString().trim())
+      .filter(Boolean);
+
     onSave?.({
       ...form,
       price: Number.isFinite(Number(form.price)) ? Number(form.price) : 0,
+      images: cleanedImages,
       stockItems,
     });
   };
@@ -209,6 +235,41 @@ export default function ProductEditModal({
                     }
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
                   />
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-sm font-semibold text-brand-text">Imágenes</label>
+                    <button
+                      type="button"
+                      onClick={addImageField}
+                      className="flex items-center gap-1 rounded-md border border-[#1F3B67] px-2 py-1 text-xs font-semibold text-[#1F3B67] transition hover:bg-[#1F3B67]/10"
+                    >
+                      +
+                      <span>Agregar</span>
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {images.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="url"
+                          placeholder="Pega la URL de la imagen"
+                          value={url}
+                          onChange={(event) => updateImage(index, event.target.value)}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1F3B67] focus:ring-2 focus:ring-[#1F3B67]/30"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImageField(index)}
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-600 transition hover:bg-red-50"
+                          aria-label="Eliminar imagen"
+                        >
+                          <FaTrash size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div>

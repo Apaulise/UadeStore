@@ -1,7 +1,7 @@
 // src/pages/Home.jsx
 import heroShirt from "../assets/RemeraInicio.png";
 import libroUADE from "../assets/LibreUADE.png";
-import termoUADE from "../assets/termoUADE.png";
+import termoUADE from "../assets/TermoUADE.png";
 import remeraUadeImg from "../assets/remerauade.jpg";
 import buzoUadeImg from "../assets/buzouade.jpg";
 import bolsaUADE from "../assets/BolsaUADE.png";

@@ -1,32 +1,33 @@
 import { supabase } from './supabase.service.js';
-import { publishPurchaseEvent } from './rabbitmq.service.js';
+import { publishPurchaseEvent, publishStockUpdated } from './rabbitmq.service.js';
 
 export const createNewPurchase = async (purchaseData) => {
   console.log("info de ordennn", purchaseData)
   const { userId, items, total } = purchaseData;
+  const stockChangesByProduct = new Map();
 
   // --- Insertar la Compra Principal ---
   const { data: compra, error: compraError } = await supabase
     .from('Compra')
     .insert({
-      usuario_id: 1, 
+      usuario_id: 1,
       total_compra: total,
     })
-    .select() 
-    .single(); 
+    .select()
+    .single();
 
   if (compraError) {
     console.error("Error creando Compra:", compraError);
-    throw new Error('Error al crear la orden principal.',compraError);
+    throw new Error('Error al crear la orden principal.', compraError);
   }
 
   const compraId = compra.id;
 
-  const itemsToInsert = items.map(item => ({
+  const itemsToInsert = items.map((item) => ({
     compra_id: compraId,
-    stock_id: item.stockId, 
+    stock_id: item.stockId,
     cantidad: item.quantity,
-    subtotal: item.price * item.quantity 
+    subtotal: item.price * item.quantity,
   }));
 
   const { error: itemsError } = await supabase
@@ -35,55 +36,90 @@ export const createNewPurchase = async (purchaseData) => {
 
   if (itemsError) {
     console.error("Error creando Items:", itemsError);
-    await supabase.from('Compra').delete().eq('id', compraId); 
+    await supabase.from('Compra').delete().eq('id', compraId);
     throw new Error('Error al guardar los detalles de la orden.');
   }
 
- try {
+  try {
     for (const item of items) {
       // 1. Obtener el stock actual (Necesario para calcular el nuevo stock en JS)
       const { data: currentStockData, error: fetchError } = await supabase
         .from('Stock')
-        .select('stock')
+        .select('id, articulo_id, color_id, talle, stock')
         .eq('id', item.stockId)
         .single();
 
       if (fetchError || !currentStockData) {
-         throw new Error(`No se pudo obtener el stock actual para stockId ${item.stockId}. Details: ${fetchError?.message}`);
+        throw new Error(
+          `No se pudo obtener el stock actual para stockId ${item.stockId}. Details: ${fetchError?.message}`,
+        );
       }
-      
+
       const currentStockValue = currentStockData.stock;
       const purchasedQuantity = item.quantity;
       const newStock = currentStockValue - purchasedQuantity;
       const { error: updateError } = await supabase
         .from('Stock')
-        .update({ stock: newStock }) // Actualiza con el valor calculado
+        .update({ stock: newStock })
         .eq('id', item.stockId);
 
       if (updateError) {
-        // Si la actualización de stock falla, idealmente deberías revertir toda la transacción
+        // Si la actualizacion de stock falla, idealmente deberias revertir toda la transaccion
         // (Borrar Compra e Item_compra). Esto es complejo sin RPC.
         console.error(`Error actualizando stock para stockId ${item.stockId}:`, updateError);
         throw new Error(`Fallo al actualizar el stock para uno de los items. Details: ${updateError.message}`);
       }
-       console.log(`[OrderService] Stock actualizado para stockId ${item.stockId}: ${currentStockValue} -> ${newStock}`);
+
+      const productIdForEvent = currentStockData.articulo_id ?? null;
+      const variants = stockChangesByProduct.get(productIdForEvent) ?? [];
+      variants.push({
+        stockId: item.stockId,
+        size: currentStockData.talle ?? null,
+        quantity: newStock,
+        delta: -purchasedQuantity,
+        colorId: currentStockData.color_id ?? null,
+      });
+      stockChangesByProduct.set(productIdForEvent, variants);
+
+      console.log(
+        `[OrderService] Stock actualizado para stockId ${item.stockId}: ${currentStockValue} -> ${newStock}`,
+      );
     }
   } catch (stockUpdateError) {
-      // Si cualquier actualización de stock falla, intentamos revertir todo
-      console.error("Error durante la actualización de stock, intentando revertir...", stockUpdateError);
-      await supabase.from('Item_compra').delete().eq('compra_id', compraId);
-      await supabase.from('Compra').delete().eq('id', compraId);
-      // Re-lanzamos el error para que el controlador lo maneje
-      throw stockUpdateError; 
+    // Si cualquier actualizacion de stock falla, intentamos revertir todo
+    console.error("Error durante la actualizacion de stock, intentando revertir...", stockUpdateError);
+    await supabase.from('Item_compra').delete().eq('compra_id', compraId);
+    await supabase.from('Compra').delete().eq('id', compraId);
+    // Re-lanzamos el error para que el controlador lo maneje
+    throw stockUpdateError;
   }
 
-  // --- (Futuro Paso) Enviar evento a RabbitMQ ---
-  // const eventPayload = { orderId: compraId, userId, timestamp: new Date() };
-  // publishOrderCreatedEvent(eventPayload);
-  // --- Fin Futuro Paso ---
+  const purchasePayload = {
+    id: compraId,
+    userId: userId ?? compra?.usuario_id ?? null,
+    total,
+    items: itemsToInsert,
+    createdAt: compra?.created_at ?? new Date().toISOString(),
+  };
+
+  await publishPurchaseEvent('created', purchasePayload);
+  await publishPurchaseEvent('completed', { ...purchasePayload, status: 'COMPLETED' });
+
+  for (const [productId, variants] of stockChangesByProduct.entries()) {
+    await publishStockUpdated({
+      productId,
+      purchaseId: compraId,
+      variants: variants.map((variant) => ({
+        ...variant,
+        productId,
+        purchaseId: compraId,
+      })),
+    });
+  }
 
   return { ...compra, items: itemsToInsert };
 };
+
 
 // Nueva función para obtener el historial de compras de un usuario
 export const getPurchaseHistory = async (userId) => {

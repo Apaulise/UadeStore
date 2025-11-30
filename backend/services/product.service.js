@@ -1,4 +1,5 @@
 ﻿import { supabase } from './supabase.service.js';
+import { publishItemEvent, publishStockUpdated } from './rabbitmq.service.js';
 
 const PRODUCT_SELECT = `
   *,
@@ -15,6 +16,42 @@ const normalizeHex = (hex) => {
 };
 
 const normalizeName = (value) => (value ?? '').toString().trim();
+
+const mapVariants = (product) =>
+  (product?.Stock ?? []).map((row) => ({
+    stockId: row.id ?? null,
+    productId: product?.id ?? null,
+    size: row.talle ?? null,
+    quantity: row.stock ?? 0,
+    colorId: row.color_id ?? row.Color?.id ?? null,
+    colorName: row.Color?.nombre ?? null,
+    colorHex: row.Color?.hexa ?? null,
+  }));
+
+const toItemPayload = (product) => {
+  if (!product) return null;
+  return {
+    id: product.id,
+    title: product.Titulo ?? '',
+    price: product.precio ?? null,
+    description: product.descripcion ?? '',
+    category: product.categoria ?? null,
+    images: (product.Imagen ?? []).map((img) => img.imagen).filter(Boolean),
+    stock: mapVariants(product),
+  };
+};
+
+const publishItemSnapshot = async (eventName, product) => {
+  const payload = toItemPayload(product);
+  if (!payload) return;
+
+  await publishItemEvent(eventName, payload);
+  await publishStockUpdated({
+    productId: payload.id,
+    title: payload.title,
+    variants: payload.stock,
+  });
+};
 
 const ensureColor = async ({ name, hex }, colorsCache) => {
   const normalizedHex = normalizeHex(hex);
@@ -358,7 +395,9 @@ export const createProductWithStock = async (payload) => {
   const productId = await createArticuloWithSafeId(safePayload);
   await syncProductStock(productId, safePayload.stockItems ?? []);
   await upsertProductImages(productId, safePayload.images);
-  return getArticuloById(productId);
+  const product = await getArticuloById(productId);
+  await publishItemSnapshot('created', product);
+  return product;
 };
 
 export const updateProductWithStock = async (productId, payload) => {
@@ -366,7 +405,11 @@ export const updateProductWithStock = async (productId, payload) => {
   await updateArticulo(productId, safePayload);
   await syncProductStock(productId, safePayload.stockItems ?? []);
   await upsertProductImages(productId, safePayload.images);
-  return getArticuloById(productId);
+  const product = await getArticuloById(productId);
+  if (product) {
+    await publishItemSnapshot('updated', product);
+  }
+  return product;
 };
 
 export const deleteProduct = async (productId) => {
@@ -425,6 +468,8 @@ export const deleteProduct = async (productId) => {
     if (articleError) throw new Error(`Error deleting Articulo: ${articleError.message}`);
 
     console.log(`Successfully deleted Articulo ${productId} and related data.`);
+    await publishItemEvent('deleted', { id: productId });
+    await publishStockUpdated({ productId, variants: [] });
     return true;
 
   } catch (error) {

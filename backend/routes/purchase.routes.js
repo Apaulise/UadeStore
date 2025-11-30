@@ -9,5 +9,4 @@ const router = Router();
 router.post('/', createPurchaseController);
 router.get('/me', getPurchaseHistoryController);
 
-router.get('/me', getPurchaseHistoryController);
 export default router;

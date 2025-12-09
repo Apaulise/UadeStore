@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import logoUade from "../../assets/logouadeNegro.png";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: "/", label: "Inicio" },
@@ -81,6 +82,7 @@ const Header = () => {
 
   const toggleNav = () => setIsNavOpen((open) => !open);
   const toggleSearch = () => setIsSearchOpen((open) => !open);
+  const { user } = useAuth();
 
   // Mantiene el input sincronizado con la URL
   useEffect(() => {
@@ -199,7 +201,7 @@ const Header = () => {
               to="/mis-compras"
               className="text-sm font-semibold transition hover:text-brand-blue"
             >
-              Camila
+              {               user.name}
             </Link>
           </div>
 

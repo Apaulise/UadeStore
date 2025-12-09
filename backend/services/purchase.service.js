@@ -5,12 +5,16 @@ export const createNewPurchase = async (purchaseData) => {
   console.log("info de ordennn", purchaseData)
   const { userId, items, total } = purchaseData;
   const stockChangesByProduct = new Map();
+  if (!userId || typeof userId !== 'string') {
+     console.error("[OrderService] Error: userId inválido.", userId);
+     throw new Error('El ID de usuario es inválido.');
+  }
 
   // --- Insertar la Compra Principal ---
   const { data: compra, error: compraError } = await supabase
     .from('Compra')
     .insert({
-      usuario_id: 1,
+      usuario_id: userId,
       total_compra: total,
     })
     .select()

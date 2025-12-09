@@ -42,32 +42,37 @@ export const ProductsAPI = {
 
 // Órdenes (lo que otros consumen de nosotros)
 export const OrdersAPI = {
-  mine: (userId = 1) => http(`/orders/me?userId=${userId}`), // MOCK userId
-  create: ({ items, total, userId = 1 }) =>
-    http(`/orders?userId=${userId}`, {
+  mine: (userId) => http(`/orders/me?userId=${userId}`),
+
+  create: ({ items, total, userId }) =>
+    http("/orders", { // Ya no lo mandamos por URL
       method: "POST",
-      body: JSON.stringify({ items, total }),
+      body: JSON.stringify({ items, total, userId }), 
     }),
 };
 
 export const CartAPI = {
-  get: (userId = 1) => http(`/cart?userId=${userId}`),
-  addItem: ({ stockId, quantity = 1, userId = 1 }) =>
+  get: (userId) => http(`/cart?userId=${userId}`),
+
+  addItem: ({ stockId, quantity = 1, userId }) =>
     http("/cart", {
       method: "POST",
       body: JSON.stringify({ stockId, quantity, userId }),
     }),
-  updateQuantity: ({ cartId, quantity, userId = 1 }) =>
+
+  updateQuantity: ({ cartId, quantity, userId }) =>
     http(`/cart/${cartId}`, {
       method: "PATCH",
       body: JSON.stringify({ quantity, userId }),
     }),
-  remove: ({ cartId, userId = 1 }) =>
+
+  remove: ({ cartId, userId }) =>
     http(`/cart/${cartId}`, {
       method: "DELETE",
       body: JSON.stringify({ userId }),
     }),
-  clear: (userId = 1) =>
+
+  clear: (userId) =>
     http("/cart", {
       method: "DELETE",
       body: JSON.stringify({ userId }),

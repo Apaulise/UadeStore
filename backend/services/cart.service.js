@@ -1,7 +1,5 @@
 import { supabase } from './supabase.service.js';
 
-const DEFAULT_USER_ID = 1;
-
 const roundCurrency = (value) => Number.parseFloat(Number(value ?? 0).toFixed(2));
 
 const fetchStockById = async (stockId) => {
@@ -129,7 +127,7 @@ const buildCartItems = async (rows) => {
     .filter(Boolean);
 };
 
-export const getCart = async ({ userId = DEFAULT_USER_ID } = {}) => {
+export const getCart = async (userId) => {
   const rows = await fetchCartRows(userId);
   const items = await buildCartItems(rows);
 
@@ -141,10 +139,10 @@ export const getCart = async ({ userId = DEFAULT_USER_ID } = {}) => {
 };
 
 export const addItem = async ({
-  userId = DEFAULT_USER_ID,
+  userId,
   stockId,
   quantity = 1,
-} = {}) => {
+}) => {
   if (!stockId) {
     throw new Error('stockId requerido');
   }
@@ -194,12 +192,12 @@ export const addItem = async ({
     }
   }
 
-  return getCart({ userId });
+  return getCart(userId);
 };
 
 export const updateItemQuantity = async ({
   cartId,
-  userId = DEFAULT_USER_ID,
+  userId,
   quantity,
 }) => {
   if (!cartId) {
@@ -239,20 +237,20 @@ export const updateItemQuantity = async ({
     throw new Error(updateError.message);
   }
 
-  return getCart({ userId });
+  return getCart(userId);
 };
 
-export const removeItem = async ({ cartId, userId = DEFAULT_USER_ID }) => {
+export const removeItem = async ({ cartId, userId }) => {
   if (!cartId) throw new Error('cartId requerido');
 
   const { error } = await supabase.from('Carrito').delete().eq('id', cartId);
 
   if (error) throw new Error(error.message);
 
-  return getCart({ userId });
+  return getCart(userId);
 };
 
-export const clearCart = async ({ userId = DEFAULT_USER_ID }) => {
+export const clearCart = async (userId) => {
   const { error } = await supabase.from('Carrito').delete().eq('usuario_id', userId);
 
   if (error) throw new Error(error.message);

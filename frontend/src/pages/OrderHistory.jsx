@@ -1,6 +1,8 @@
+/* eslint-disable no-irregular-whitespace */
 import React, { useMemo, useState, useEffect } from 'react';
 import { formatOrderDate } from '../data/orders';
 import { usePendingOrder } from '../context/PendingOrderContext';
+import { useAuth } from '../context/AuthContext';
 
 // --- PASO 1 (MODIFICADO): Importar la API centralizada ---
 // Asegúrate de que la ruta sea correcta (el mismo problema de antes)
@@ -14,18 +16,17 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
 });
 
 const OrderHistory = () => {
-  const { lastOrder } = usePendingOrder();
-  const [query, setQuery] = useState('');
+const { lastOrder } = usePendingOrder();
+const [query, setQuery] = useState('');
 
-  const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const [orders, setOrders] = useState([]);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(null);
 
-  const userId = 1
-  //const user = useUser();
-  //const userId = user?.id; // Obtiene el ID del usuario real
-  
-  console.log('ID de Usuario detectado:', userId);
+const { user } = useAuth();
+const userId = user?.id_usuario; // Obtiene el ID del usuario real
+ 
+console.log('ID de Usuario detectado:', userId);
 
 useEffect(() => {
   // Si no hay ID de usuario (no logueado), no hagas nada.
@@ -81,14 +82,14 @@ useEffect(() => {
   fetchOrders();
 }, [userId]);
 
-  
-  // --- (Toda la lógica de 'useMemo' y el JSX de abajo sigue 100% igual) ---
-  
-  const baseOrders = useMemo(() => {
-    const combined = [...orders]; 
-    if (lastOrder) {
-      const exists = combined.some((order) => order.id === lastOrder.id);
-      if (!exists) {
+ 
+ // --- (Toda la lógica de 'useMemo' y el JSX de abajo sigue 100% igual) ---
+ 
+ const baseOrders = useMemo(() => {
+ const combined = [...orders]; 
+ if (lastOrder) {
+  const exists = combined.some((order) => order.id === lastOrder.id);
+  if (!exists) {
         combined.push({
           id: lastOrder.id || `order-${lastOrder.createdAt}`,
           createdAt: lastOrder.createdAt,
@@ -229,8 +230,8 @@ useEffect(() => {
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
+    </div>
+  </div>
+);
 };
- export default OrderHistory;
+export default OrderHistory;

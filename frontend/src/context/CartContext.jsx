@@ -7,8 +7,7 @@
   useState,
 } from "react";
 import { CartAPI } from "../services/api";
-
-const USER_ID = 1;
+import { useAuth } from '../context/AuthContext';
 
 const CartContext = createContext(null);
 
@@ -24,7 +23,8 @@ export const CartProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const { user } = useAuth();
+  const userId = user?.sub || user?.id || user?.id_usuario;
   const syncCart = useCallback((cart) => {
     if (!cart) return;
     setItems(normalizeItems(cart.items));
@@ -32,9 +32,10 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const fetchCart = useCallback(async () => {
+    console.log("Fetching cart for userId:", userId);
     setIsLoading(true);
     try {
-      const cart = await CartAPI.get(USER_ID);
+      const cart = await CartAPI.get(userId);
       syncCart(cart);
       setError(null);
     } catch (err) {
@@ -75,7 +76,7 @@ export const CartProvider = ({ children }) => {
   const addItem = useCallback(
     async ({ stockId, quantity = 1 }) => {
       const cart = await handleRequest(() =>
-        CartAPI.addItem({ stockId, quantity, userId: USER_ID }),
+        CartAPI.addItem({ stockId, quantity, userId: userId }),
       );
       setIsOpen(true);
       return cart;
@@ -96,7 +97,7 @@ export const CartProvider = ({ children }) => {
         CartAPI.updateQuantity({
           cartId,
           quantity: safeQuantity,
-          userId: USER_ID,
+          userId: userId,
         }),
       );
     },
@@ -126,7 +127,7 @@ export const CartProvider = ({ children }) => {
       await handleRequest(() =>
         CartAPI.remove({
           cartId,
-          userId: USER_ID,
+          userId: userId,
         }),
       );
     },
@@ -134,7 +135,7 @@ export const CartProvider = ({ children }) => {
   );
 
   const clear = useCallback(async () => {
-    await handleRequest(() => CartAPI.clear(USER_ID));
+    await handleRequest(() => CartAPI.clear(userId));
   }, [handleRequest]);
 
   const value = useMemo(
@@ -171,7 +172,7 @@ export const CartProvider = ({ children }) => {
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
-
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCart = () => {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used within CartProvider");

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { usePendingOrder } from '../context/PendingOrderContext';
 import { OrdersAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const accentColor = '#1F3B67';
 // Calcula fecha de retiro: dentro de 3 días hábiles
@@ -36,6 +37,7 @@ const Checkout = () => {
   const [email, setEmail] = useState('');
   const [notifyOffers, setNotifyOffers] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
 
   const orderPreview = useMemo(
     () =>
@@ -67,7 +69,7 @@ const Checkout = () => {
     setIsProcessing(true);
 
 
-    const userIdPlaceholder = 1; 
+    const userIdPlaceholder = user?.id_usuario 
 
     const orderPayload =  {
       userId: userIdPlaceholder, 

@@ -6,7 +6,6 @@ const accentColor = '#1F3B67';
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
-  currency: 'USD',
   minimumFractionDigits: 2,
 });
 

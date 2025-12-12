@@ -193,5 +193,36 @@ export const WalletAPI = {
     // 4. Devolvemos el dato limpio (el primer objeto del array 'data')
     // El Core devuelve: { success: true, data: [ { balance: ... } ] }
     return json.data && json.data[0] ? json.data[0] : null;
+  },
+
+  pay: async ({ fromWalletId, amount, currency, description }) => {
+    const CORE_URL = "https://jtseq9puk0.execute-api.us-east-1.amazonaws.com";
+    const token = localStorage.getItem('authToken');
+
+    const payload = {
+      from: fromWalletId,   // El UUID de TU billetera
+      to: "SYSTEM",         // ⚠️ REGLA DE NEGOCIO: Para compras, va a SYSTEM
+      currency: currency,   // Ej: "ARG" o "USD"
+      amount: Number(amount),
+      type: "payment",      // Tipo de movimiento
+      description: description // Ej: "Compra orden #123"
+    };
+
+    const res = await fetch(`${CORE_URL}/api/transfers`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      throw new Error(`Error en el pago: ${errorText || res.status}`);
+    }
+
+    return await res.json();
   }
+
 };

@@ -25,8 +25,7 @@ const getBusinessDateFromNow = (businessDays = 3) => {
 const pickupDate = getBusinessDateFromNow(3);
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
-  style: 'currency',
-  currency: 'USD', // O 'ARS' si prefieres, aunque el formatter usa USD
+  style: 'currency', // O 'ARS' si prefieres, aunque el formatter usa USD
   minimumFractionDigits: 2,
 });
 
@@ -97,19 +96,38 @@ const Checkout = () => {
   const handlePay = async () => {
     if (isProcessing) return;
 
-    // ✨ VALIDACIÓN DE SALDO ANTES DE PAGAR
+    // VALIDACIÓN DE SALDO ANTES DE PAGAR
     if (loadingWallet) {
         toast.error("Aguarde un momento, cargando billetera...");
         return;
     }
-    
-    // Si el total es mayor al saldo, bloqueamos la compra
-    if (total > walletBalanceNumber) {
-        toast.error(`Saldo insuficiente. Tienes ${formattedBalance} y necesitas ${formattedTotal}`);
+    // Verificamos tener el UUID de la billetera (Viene del endpoint getMine)
+    if (!wallet?.uuid) {
+        toast.error("Error: No se identificó tu billetera para debitar.");
         return;
     }
 
     setIsProcessing(true);
+
+    try {
+        console.log("Iniciando transferencia...");
+        
+        await WalletAPI.pay({
+            fromWalletId: wallet.uuid, // El UUID que nos devolvió getMine
+            amount: total,
+            currency: wallet.currency || "ARG", // Usamos la moneda de tu billetera
+            description: `Compra UadeStore - ${items.length} items`
+        });
+
+        console.log("Pago exitoso en Core. Creando orden local...");
+
+    setIsProcessing(true);
+    } catch (err) {
+        console.error("Error en el proceso de transferencia:", err);
+        toast.error(err.message || 'Error al procesar el pago');
+      } finally {
+        setIsProcessing(false);
+      }
 
     // Aseguramos que haya un ID, buscando en las variantes posibles
     const userIdPlaceholder = user?.sub || user?.id || user?.id_usuario;

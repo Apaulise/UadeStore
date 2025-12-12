@@ -131,7 +131,7 @@ const Checkout = () => {
       }
 
     // Aseguramos que haya un ID, buscando en las variantes posibles
-    const userIdPlaceholder = user?.sub || user?.id || user?.id_usuario;
+    const userIdPlaceholder = user?.sub;
 
     const orderPayload =  {
       userId: userIdPlaceholder, 

@@ -18,7 +18,7 @@ const libreriaImg = libroUADE;
 
 const categories = [
   { name: "NUESTROS BASICOS", image: basicosImg, slug: "nuestros-basicos" },
-  { name: "BESTSELLERS", image: bestsellersImg, slug: "bestsellers" },
+  { name: "BESTSELLERS", image: bestsellersImg, slug: "bestseller" },
   { name: "ACCESORIO", image: accesoriosImg, slug: "accesorios" },
   { name: "LIBRERIA", image: libreriaImg, slug: "libreria" },
 ];

@@ -25,7 +25,8 @@ const getBusinessDateFromNow = (businessDays = 3) => {
 const pickupDate = getBusinessDateFromNow(3);
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
-  style: 'currency', // O 'ARS' si prefieres, aunque el formatter usa USD
+  style: 'currency', 
+  currency:"ARS",// O 'ARS' si prefieres, aunque el formatter usa USD
   minimumFractionDigits: 2,
 });
 

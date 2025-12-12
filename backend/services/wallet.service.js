@@ -1,13 +1,13 @@
 import 'dotenv/config';
 
-const CORE_URL = process.env.CORE_BACKEND_URL;
+const COREee_URL = process.env.CORE_BACKEND_URL;
 
 export const getMyBalanceService = async (userToken) => {
-  if (!CORE_URL) throw new Error("CORE_BACKEND_URL no definida");
+  if (!COREee_URL) throw new Error("CORE_BACKEND_URL no definida");
 
   try {
     // Construimos la URL completa: https://...amazonaws.com/api/wallets/mine
-    const response = await fetch(`${CORE_URL}/api/wallets/mine`, {
+    const response = await fetch(`${COREe_URL}/api/wallets/mine`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${userToken}`, // El token viaja aquí

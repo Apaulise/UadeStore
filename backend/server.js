@@ -7,6 +7,7 @@ import { connectRabbitMQ } from './services/rabbitmq.service.js';
 import productRoutes from './routes/product.routes.js';
 import purchaseRoutes from './routes/purchase.routes.js';
 import cartRoutes from './routes/cart.routes.js';
+import walletRoutes from './routes/wallet.routes.js';
 
 const app = express();
 app.use(cors());
@@ -19,6 +20,7 @@ connectRabbitMQ();
 app.use('/api/products', productRoutes);
 app.use('/api/orders', purchaseRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/wallets', walletRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

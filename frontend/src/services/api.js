@@ -1,17 +1,40 @@
 // frontend/src/services/api.js
-//para centralizar llamadas (luego lo usarás en páginas/contexts):
-//Con esto, cuando tengas el backend levantado, el front ya puede consumir datos reales sin tocar más configuración.
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
 
+// 👇 HELPER: Busca el token guardado (Asegurate que en AuthContext lo guardes como 'authToken')
+const getToken = () => localStorage.getItem('authToken'); 
+
 async function http(path, options = {}) {
+  // 1. Preparamos los headers base
+  const headers = { 
+    "Content-Type": "application/json", 
+    ...(options.headers || {}) 
+  };
+
+  // 2. MAGIA 🪄: Si hay token, lo agregamos automáticamente
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  // 3. Hacemos la petición con los headers actualizados
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
+    headers, // Usamos nuestros headers con token
   });
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status} ${text}`);
+    // Intentamos parsear el JSON de error si existe
+    try {
+        const jsonError = JSON.parse(text);
+        throw new Error(jsonError.message || `HTTP ${res.status}`);
+    } catch (e) {
+        throw new Error(`HTTP ${res.status} ${text}`);
+    }
   }
+
   return res.status !== 204 ? res.json() : null;
 }
 
@@ -40,17 +63,18 @@ export const ProductsAPI = {
   sizes: () => http("/products/sizes"),
 };
 
-// Órdenes (lo que otros consumen de nosotros)
+// Órdenes
 export const OrdersAPI = {
   mine: (userId) => http(`/orders/me?userId=${userId}`),
 
   create: ({ items, total, userId }) =>
-    http("/orders", { // Ya no lo mandamos por URL
+    http("/orders", {
       method: "POST",
       body: JSON.stringify({ items, total, userId }), 
     }),
 };
 
+// Carrito
 export const CartAPI = {
   get: (userId) => http(`/cart?userId=${userId}`),
 
@@ -77,4 +101,10 @@ export const CartAPI = {
       method: "DELETE",
       body: JSON.stringify({ userId }),
     }),
+};
+
+// Wallet (Billetera)
+export const WalletAPI = {
+  // Al llamar a http(), automáticamente se pegará el token en el header Authorization
+  getMine: () => http('/wallet/mine') 
 };

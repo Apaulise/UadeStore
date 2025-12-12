@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { usePendingOrder } from '../context/PendingOrderContext';
 import { OrdersAPI } from '../services/api';
+import { WalletAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const accentColor = '#1F3B67';
@@ -29,6 +30,8 @@ const currencyFormatter = new Intl.NumberFormat('es-AR', {
   currency: 'USD',
   minimumFractionDigits: 2,
 });
+
+
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -82,10 +85,16 @@ const Checkout = () => {
     };
 
     console.info('Enviando orden a la APIIIII:', orderPayload);
-
+    const walletResponse = await WalletAPI.getMine();
+    console.log('Respuesta de la wallet:', walletResponse);
+    const walletData = walletResponse.data;
+    console.log('Datos de la wallet obtenidos:', walletData);
     try {
         const response = await OrdersAPI.create(orderPayload);
         const orderData = response.data; // Ya sabemos que esto funciona
+
+        
+        
 
         // 1. Guarda la orden en el contexto (no hace daño)
         setLastOrder(orderData); 

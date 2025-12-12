@@ -128,14 +128,7 @@ const buildCartItems = async (rows) => {
 };
 
 export const getCart = async (userId) => {
-  const rows = await fetchCartRows(userId);
-  const items = await buildCartItems(rows);
-
-  const total = roundCurrency(
-    items.reduce((acc, item) => acc + (Number(item.subtotal) || 0), 0),
-  );
-
-  return { items, total };
+ 
 };
 
 export const addItem = async ({

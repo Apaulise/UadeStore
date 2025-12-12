@@ -8,22 +8,7 @@ import {
 
 
 export const getCartController = async (req, res) => {
-  try {
-    const { userId } = req.query;
-    console.log("1️⃣ Controller: Request recibido. ID:", userId); // <--- LOG 1
-
-    if (!userId) return res.status(400).json({ message: "Falta ID" });
-
-    console.log("2️⃣ Controller: Llamando al servicio..."); // <--- LOG 2
-    const cart = await getCart(userId);
-    
-    console.log("3️⃣ Controller: Servicio respondió. Enviando respuesta..."); // <--- LOG 3
-    return res.status(200).json(cart);
-
-  } catch (error) {
-    console.error("❌ Controller Error:", error);
-    return res.status(500).json({ message: error.message });
-  }
+  
 };
 
 export const addItemController = async (req, res) => {

@@ -24,7 +24,7 @@ const [isLoading, setIsLoading] = useState(true);
 const [error, setError] = useState(null);
 
 const { user } = useAuth();
-const userId = user?.id_usuario; // Obtiene el ID del usuario real
+const userId = user?.sub; // Obtiene el ID del usuario real
  
 console.log('ID de Usuario detectado:', userId);
 

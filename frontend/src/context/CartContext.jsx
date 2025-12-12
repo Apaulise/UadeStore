@@ -24,7 +24,7 @@ export const CartProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-  const userId = user?.sub || user?.id || user?.id_usuario;
+  const userId = user?.sub;
   const syncCart = useCallback((cart) => {
     if (!cart) return;
     setItems(normalizeItems(cart.items));

@@ -1,32 +1,39 @@
 import 'dotenv/config';
-const CORE_URL = process.env.CORE_ENDPOINT ;
+
+const CORE_URL = process.env.CORE_BACKEND_URL;
 
 export const getMyBalanceService = async (userToken) => {
-  if (!CORE_URL) {
-    throw new Error("La URL del Core no está configurada en .env");
-  }
+  if (!CORE_URL) throw new Error("CORE_BACKEND_URL no definida");
 
   try {
-    // Hacemos la petición al endpoint que nos pasaste
+    // Construimos la URL completa: https://...amazonaws.com/api/wallets/mine
     const response = await fetch(`${CORE_URL}/api/wallets/mine`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${userToken}`, // 🔑 Pasamos el token del usuario
+        'Authorization': `Bearer ${userToken}`, // El token viaja aquí
         'Content-Type': 'application/json'
+        // Nota: La cookie de refresh_token no suele ser necesaria para leer datos,
+        // con el Bearer token debería alcanzar.
       }
     });
 
-    // Si el Core responde error (ej: 401 token vencido, 404 no tiene wallet)
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || `Error del Core: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data; // Devolvemos la info de la wallet (saldo, moneda, etc.)
+    const json = await response.json();
+    
+    // LA RESPUESTA VIENE ASÍ: { success: true, data: [ { balance: ... } ] }
+    // Vamos a devolver solo el primer objeto de la billetera para facilitarte la vida
+    if (json.data && json.data.length > 0) {
+        return json.data[0]; 
+    }
+
+    return null; // O un objeto vacío si no tiene billetera
 
   } catch (error) {
-    console.error("Error en getMyBalanceService:", error.message);
+    console.error("Error al obtener wallet:", error.message);
     throw error;
   }
 };

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react'; // ✨ Agregamos useEffect
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
@@ -8,30 +8,27 @@ import { WalletAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const accentColor = '#1F3B67';
+
 // Calcula fecha de retiro: dentro de 3 días hábiles
 const getBusinessDateFromNow = (businessDays = 3) => {
   const d = new Date();
-  // Normalizar a mediodía para evitar saltos por huso horario
   d.setHours(12, 0, 0, 0);
   let remaining = businessDays;
   while (remaining > 0) {
     d.setDate(d.getDate() + 1);
     const day = d.getDay();
-    // 0 = domingo, 6 = sábado -> no son hábiles
     if (day !== 0 && day !== 6) remaining -= 1;
   }
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
+
 const pickupDate = getBusinessDateFromNow(3);
-const availableBalance = 700;
 
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'USD', // O 'ARS' si prefieres, aunque el formatter usa USD
   minimumFractionDigits: 2,
 });
-
-
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -41,6 +38,30 @@ const Checkout = () => {
   const [notifyOffers, setNotifyOffers] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
+
+  // ✨ Estado para la billetera
+  const [wallet, setWallet] = useState(null);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+
+  // ✨ Efecto para cargar el saldo real al montar el componente
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const myWallet = await WalletAPI.getMine();
+        // Nota: myWallet ya viene limpio gracias al service (ej: { balance: "20000.00", ... })
+        setWallet(myWallet);
+      } catch (error) {
+        console.error("Error cargando wallet:", error);
+        toast.error("No se pudo cargar el saldo de tu billetera");
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+
+    if (user) {
+        fetchWallet();
+    }
+  }, [user]);
 
   const orderPreview = useMemo(
     () =>
@@ -57,7 +78,12 @@ const Checkout = () => {
   );
 
   const formattedTotal = currencyFormatter.format(total);
-  const formattedBalance = currencyFormatter.format(availableBalance);
+
+  // ✨ Convertimos el saldo a número para comparar y formatear
+  const walletBalanceNumber = parseFloat(wallet?.balance || 0);
+  const formattedBalance = loadingWallet 
+      ? "Cargando..." 
+      : currencyFormatter.format(walletBalanceNumber);
 
   const handleContinueShopping = () => {
     navigate('/catalogo');
@@ -69,10 +95,23 @@ const Checkout = () => {
 
   const handlePay = async () => {
     if (isProcessing) return;
+
+    // ✨ VALIDACIÓN DE SALDO ANTES DE PAGAR
+    if (loadingWallet) {
+        toast.error("Aguarde un momento, cargando billetera...");
+        return;
+    }
+    
+    // Si el total es mayor al saldo, bloqueamos la compra
+    if (total > walletBalanceNumber) {
+        toast.error(`Saldo insuficiente. Tienes ${formattedBalance} y necesitas ${formattedTotal}`);
+        return;
+    }
+
     setIsProcessing(true);
 
-
-    const userIdPlaceholder = user?.id_usuario 
+    // Aseguramos que haya un ID, buscando en las variantes posibles
+    const userIdPlaceholder = user?.sub || user?.id || user?.id_usuario;
 
     const orderPayload =  {
       userId: userIdPlaceholder, 
@@ -83,26 +122,15 @@ const Checkout = () => {
       })),
       total: total,
     };
-
-    console.info('Enviando orden a la APIIIII:', orderPayload);
-    const walletResponse = await WalletAPI.getMine();
-    console.log('Respuesta de la wallet:', walletResponse);
-    const walletData = walletResponse.data;
-    console.log('Datos de la wallet obtenidos:', walletData);
+  
     try {
+        // Creamos la orden (La base de datos validará stock, etc.)
         const response = await OrdersAPI.create(orderPayload);
-        const orderData = response.data; // Ya sabemos que esto funciona
+        const orderData = response.data; 
 
-        
-        
-
-        // 1. Guarda la orden en el contexto (no hace daño)
+        // 1. Guardar estado
         setLastOrder(orderData); 
-
-        // 2. ¡LA SOLUCIÓN! Guarda la orden en el Session Storage
-        // Lo guardamos como string, por eso usamos JSON.stringify
-        sessionStorage.setItem('lastOrder', JSON.stringify(orderData));
-        // Ajuste: construir resumen de la compra con los datos visibles del carrito
+        
         const successOrder = {
           id: orderData?.id,
           createdAt: orderData?.created_at,
@@ -110,16 +138,19 @@ const Checkout = () => {
           items: orderPreview,
           total,
         };
+        
+        // 2. Persistencia
         setLastOrder(successOrder);
         sessionStorage.setItem('lastOrder', JSON.stringify(successOrder));
 
-        // 3. Limpia el carrito
+        // 3. Limpiar carrito
         await clear(); 
         
         toast.success('Compra realizada con éxito');
 
-        // 4. Navega (ya no necesitas pasar el state aquí)
+        // 4. Redirigir
         navigate('/checkout/exito', { replace: true });
+
      } catch (err) {
         console.error("Error al crear la orden:", err);
         toast.error(err.response?.data?.message || 'Error al procesar el pago');
@@ -127,6 +158,8 @@ const Checkout = () => {
         setIsProcessing(false);
       }
   };
+  
+  // AQUI SIGUE TU RETURN (...)
 
   return (
     <div className="bg-white text-brand-text">

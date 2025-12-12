@@ -202,7 +202,7 @@ const Header = () => {
               to="/mis-compras"
               className="text-sm font-semibold transition hover:text-brand-blue"
             >
-              {               user.name} || "Mi cuenta"
+              {               user.name}
             </Link>
           </div>
 

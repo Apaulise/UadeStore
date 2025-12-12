@@ -143,6 +143,7 @@ const Header = () => {
   };
 
   return (
+    console.log('Renderizando Header con user:', user),
     <header className="bg-brand-cream text-brand-text">
       <div className="max-w-container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-4 lg:justify-normal lg:gap-8">
@@ -201,7 +202,7 @@ const Header = () => {
               to="/mis-compras"
               className="text-sm font-semibold transition hover:text-brand-blue"
             >
-              {               user.name}
+              {               user.name} || "Mi cuenta"
             </Link>
           </div>
 

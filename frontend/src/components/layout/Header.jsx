@@ -177,7 +177,7 @@ const Header = () => {
             aria-label="Principal"
             className="hidden flex-1 justify-center lg:flex"
           > 
-            <HeaderNavLinks orientation="horizontal" admin={user?.role === 'admin'} />
+            <HeaderNavLinks orientation="horizontal" admin={user?.role === 'ADMINISTRADOR'} />
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">

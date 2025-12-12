@@ -160,8 +160,36 @@ export const CartAPI = {
 
 
 
+// frontend/src/services/api.js
+
+// ... (todo tu código anterior de http, ProductsAPI, etc. dejalo igual) ...
+
+// 👇 CAMBIAMOS ESTO PARA PEGARLE DIRECTO AL CORE
 export const WalletAPI = {
+  getMine: async () => {
+    // 1. URL Directa de AWS (Core)
+    const CORE_URL = "https://jtseq9puk0.execute-api.us-east-1.amazonaws.com";
+    
+    // 2. Recuperamos el token manualmente
+    const token = localStorage.getItem('authToken');
+    
+    // 3. Fetch directo a AWS
+    const res = await fetch(`${CORE_URL}/api/wallets/mine`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // Le pegamos el token aquí
+      }
+    });
 
-  getMine: () => http('/wallet/mine')
+    if (!res.ok) {
+       throw new Error(`Error del Core: ${res.status}`);
+    }
 
+    const json = await res.json();
+    
+    // 4. Devolvemos el dato limpio (el primer objeto del array 'data')
+    // El Core devuelve: { success: true, data: [ { balance: ... } ] }
+    return json.data && json.data[0] ? json.data[0] : null;
+  }
 };

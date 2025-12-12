@@ -19,21 +19,35 @@ const getLinkClasses = ({ isActive }) =>
     isActive ? "bg-black text-white" : "hover:bg-black/5",
   ].join(" ");
 
-const HeaderNavLinks = ({ orientation = "horizontal" }) => (
-  <div
-    className={
-      orientation === "horizontal"
-        ? "flex items-center gap-2"
-        : "flex flex-col gap-2"
+const HeaderNavLinks = ({ orientation = "horizontal", admin }) => {
+  // 1. Lógica antes del return.
+  // Creamos una copia filtrada de los items.
+  // Suponiendo que el item de admin es el que tiene label 'Administracion' o un path específico.
+  const visibleItems = navItems.filter((item) => {
+    // Si el usuario NO es admin y el item es 'Administracion', lo ocultamos.
+    if (!admin && item.label === "Administracion") {
+      return false; 
     }
-  >
-    {navItems.map((item) => (
-      <NavLink key={item.to} to={item.to} className={getLinkClasses}>
-        {item.label}
-      </NavLink>
-    ))}
-  </div>
-);
+    return true; // Mostrar el resto
+  });
+
+  // 2. Return explícito del JSX
+  return (
+    <div
+      className={
+        orientation === "horizontal"
+          ? "flex items-center gap-2"
+          : "flex flex-col gap-2"
+      }
+    >
+      {visibleItems.map((item) => (
+        <NavLink key={item.to} to={item.to} className={getLinkClasses}>
+          {item.label}
+        </NavLink>
+      ))}
+    </div>
+  );
+};
 
 const SearchIcon = (props) => (
   <svg
@@ -162,8 +176,8 @@ const Header = () => {
           <nav
             aria-label="Principal"
             className="hidden flex-1 justify-center lg:flex"
-          >
-            <HeaderNavLinks orientation="horizontal" />
+          > 
+            <HeaderNavLinks orientation="horizontal" admin={user?.role === 'admin'} />
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">

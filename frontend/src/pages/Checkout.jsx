@@ -226,7 +226,15 @@ const Checkout = () => {
               </p>
               <p className="text-sm font-semibold text-brand-text">Saldo disponible: {formattedBalance}</p>
             </div>
-
+            {formattedBalance < formattedTotal ? (
+              <><p className="text-sm font-semibold text-red-600">Saldo insuficiente para completar la compra.</p><button
+                type="button"
+                onClick={handleCancel}
+                className="w-full rounded-full border border-brand-blue px-4 py-2 text-sm font-semibold text-brand-blue transition hover:bg-brand-blue/10"
+              >
+                Cancelar
+              </button></>
+            ) : (
             <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:gap-4">
               <button
                 type="button"
@@ -247,7 +255,7 @@ const Checkout = () => {
               >
                 {isProcessing ? 'Procesando…' : 'Pagar'}
               </button>
-            </div>
+            </div>)}
           </div>
         </section>
 

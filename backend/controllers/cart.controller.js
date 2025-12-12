@@ -7,9 +7,7 @@ import {
 } from '../services/cart.service.js';
 
 
-export const getCartController = async (req, res) => {
-  
-};
+
 
 export const addItemController = async (req, res) => {
   try {

@@ -127,9 +127,7 @@ const buildCartItems = async (rows) => {
     .filter(Boolean);
 };
 
-export const getCart = async (userId) => {
- 
-};
+
 
 export const addItem = async ({
   userId,

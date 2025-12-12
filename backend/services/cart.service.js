@@ -1,5 +1,5 @@
 import { supabase } from './supabase.service.js';
-
+//prueba
 const roundCurrency = (value) => Number.parseFloat(Number(value ?? 0).toFixed(2));
 
 const fetchStockById = async (stockId) => {

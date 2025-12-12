@@ -62,6 +62,7 @@ const Checkout = () => {
         fetchWallet();
     }
   }, [user]);
+  console.log("Wallet en Checkout:", wallet);
 
   const orderPreview = useMemo(
     () =>

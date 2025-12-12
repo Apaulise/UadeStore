@@ -1,4 +1,4 @@
-import 'dotenv/config';
+/*import 'dotenv/config';
 
 const CORE_URL = CORE_BACKEND_URL;
 
@@ -36,4 +36,4 @@ export const getMyBalanceService = async (userToken) => {
     console.error("Error al obtener wallet:", error.message);
     throw error;
   }
-};
+};*/

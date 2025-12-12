@@ -172,6 +172,8 @@ export const WalletAPI = {
     
     // 2. Recuperamos el token manualmente
     const token = localStorage.getItem('authToken');
+    console.log("Token de auth recuperado en WalletAPI:", token);
+    console.log("CORE_URL usada en WalletAPI:", CORE_URL);
     
     // 3. Fetch directo a AWS
     const res = await fetch(`${CORE_URL}/api/wallets/mine`, {

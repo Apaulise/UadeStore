@@ -247,7 +247,7 @@ const Checkout = () => {
               </p>
               <p className="text-sm font-semibold text-brand-text">Saldo disponible: {formattedBalance}</p>
             </div>
-            {formattedBalance < formattedTotal ? (
+            {walletBalanceNumber < total ? (
               <><p className="text-sm font-semibold text-red-600">Saldo insuficiente para completar la compra.</p><button
                 type="button"
                 onClick={handleCancel}

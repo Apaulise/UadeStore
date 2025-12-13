@@ -85,6 +85,8 @@ const Checkout = () => {
   const formattedBalance = loadingWallet 
       ? "Cargando..." 
       : currencyFormatter.format(walletBalanceNumber);
+      console.log("formattedBalance:", formattedBalance, "wallet.balance:", wallet?.balance);
+      console.log("formattedTotal:", formattedTotal, "total:", total);
 
   const handleContinueShopping = () => {
     navigate('/catalogo');

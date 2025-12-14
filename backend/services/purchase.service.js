@@ -5,6 +5,7 @@ export const createNewPurchase = async (purchaseData) => {
   console.log("info de ordennn", purchaseData)
   const { userId, items, total } = purchaseData;
   const stockChangesByProduct = new Map();
+  const stockInfoById = new Map();
   if (!userId || typeof userId !== 'string') {
      console.error("[OrderService] Error: userId inválido.", userId);
      throw new Error('El ID de usuario es inválido.');
@@ -49,7 +50,7 @@ export const createNewPurchase = async (purchaseData) => {
       // 1. Obtener el stock actual (Necesario para calcular el nuevo stock en JS)
       const { data: currentStockData, error: fetchError } = await supabase
         .from('Stock')
-        .select('id, articulo_id, color_id, talle, stock')
+        .select('id, articulo_id, color_id, talle, stock, Articulo ( Titulo )')
         .eq('id', item.stockId)
         .single();
 
@@ -75,6 +76,7 @@ export const createNewPurchase = async (purchaseData) => {
       }
 
       const productIdForEvent = currentStockData.articulo_id ?? null;
+      const productNameForEvent = currentStockData?.Articulo?.Titulo ?? null;
       const variants = stockChangesByProduct.get(productIdForEvent) ?? [];
       variants.push({
         stockId: item.stockId,
@@ -84,6 +86,10 @@ export const createNewPurchase = async (purchaseData) => {
         colorId: currentStockData.color_id ?? null,
       });
       stockChangesByProduct.set(productIdForEvent, variants);
+      stockInfoById.set(item.stockId, {
+        productId: productIdForEvent,
+        productName: productNameForEvent,
+      });
 
       console.log(
         `[OrderService] Stock actualizado para stockId ${item.stockId}: ${currentStockValue} -> ${newStock}`,
@@ -98,6 +104,14 @@ export const createNewPurchase = async (purchaseData) => {
     throw stockUpdateError;
   }
 
+  const itemsWithProductName = itemsToInsert.map((item) => {
+    const stockInfo = stockInfoById.get(item.stock_id);
+    return {
+      ...item,
+      productName: stockInfo?.productName ?? null,
+    };
+  });
+
   const purchasePayload = {
     id: compraId,
     userId: userId ?? compra?.usuario_id ?? null,
@@ -107,7 +121,11 @@ export const createNewPurchase = async (purchaseData) => {
   };
 
   await publishPurchaseEvent('created', purchasePayload);
-  await publishPurchaseEvent('completed', { ...purchasePayload, status: 'COMPLETED' });
+  await publishPurchaseEvent('completed', {
+    ...purchasePayload,
+    items: itemsWithProductName,
+    status: 'COMPLETED',
+  });
 
   for (const [productId, variants] of stockChangesByProduct.entries()) {
     await publishStockUpdated({

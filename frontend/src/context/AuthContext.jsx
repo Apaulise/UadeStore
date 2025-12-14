@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   };
   const goToCampus = () => {
     // Simplemente navegamos. El Core chequeará su propia sesión.
-    window.location.href = CORE_LOGIN_URL;
+    window.location.href = `${CORE_LOGIN_URL}/home`;
   };
 
   // ✅ FUNCIÓN 2: CERRAR SESIÓN
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
     
     // 3. Redirigimos al Login del Core
     // No mandamos redirectUrl porque queremos que se quede en el login/logout
-    window.location.href = `${CORE_LOGIN_URL}/login`; 
+    window.location.href = CORE_LOGIN_URL; 
   };
 
   const redirectToCore = () => {

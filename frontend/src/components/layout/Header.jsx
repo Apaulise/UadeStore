@@ -156,6 +156,78 @@ const Header = () => {
     setIsSearchOpen(false);
   };
 
+  const UserDropdown = () => {
+  const { user, logout, goToCampus } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Lógica para cerrar el menú si clicamos afuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        {/* BOTÓN DISPARADOR (Tu nombre de usuario) */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-1 text-sm font-semibold transition hover:text-brand-blue focus:outline-none"
+        >
+          {user?.name || "Usuario"}
+          {/* Triangulito simple con CSS o podés usar un icono SVG */}
+          <span className={`text-[10px] transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+
+        {/* EL MENÚ DESPLEGABLE */}
+        {isOpen && (
+          <div className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+            
+            {/* Opción 1: Mis Compras (Link interno) */}
+            <Link
+              to="/mis-compras"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => setIsOpen(false)} // Cerramos al hacer click
+            >
+              🛍️ Mis Compras
+            </Link>
+
+            {/* Opción 2: Ir al Campus (Acción externa) */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                goToCampus();
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            >
+              🏛️ Ir al Campus
+            </button>
+
+            <div className="my-1 border-t border-gray-100"></div>
+
+            {/* Opción 3: Cerrar Sesión */}
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                logout();
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            >
+              🚪 Cerrar Sesión
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+
   return (
     console.log('Renderizando Header con user:', user),
     <header className="bg-brand-cream text-brand-text">
@@ -212,12 +284,9 @@ const Header = () => {
                 )}
               </div>
             </button>
-            <Link
-              to="/mis-compras"
-              className="text-sm font-semibold transition hover:text-brand-blue"
-            >
-              {               user.name}
-            </Link>
+            <div className="flex items-center gap-4">
+                  <UserDropdown />
+            </div>
           </div>
 
           <div className="flex items-center gap-2 lg:hidden">

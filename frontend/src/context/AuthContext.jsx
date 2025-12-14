@@ -43,6 +43,23 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+  const goToCampus = () => {
+    // Simplemente navegamos. El Core chequeará su propia sesión.
+    window.location.href = CORE_LOGIN_URL;
+  };
+
+  // ✅ FUNCIÓN 2: CERRAR SESIÓN
+  const logout = () => {
+    // 1. Limpiamos estado local
+    setUser(null);
+    // 2. Limpiamos almacenamiento
+    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('lastOrder'); // Limpiamos órdenes pendientes por si acaso
+    
+    // 3. Redirigimos al Login del Core
+    // No mandamos redirectUrl porque queremos que se quede en el login/logout
+    window.location.href = `${CORE_LOGIN_URL}/login`; 
+  };
 
   const redirectToCore = () => {
     // URL de retorno: Tu propia URL actual
@@ -51,11 +68,6 @@ export const AuthProvider = ({ children }) => {
     window.location.href = `${CORE_LOGIN_URL}/?redirectUrl=${encodeURIComponent(currentUrl)}`;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('authToken');
-    redirectToCore();
-  };
 
   useEffect(() => {
     // 1. Buscar token en la URL (query string) 
@@ -85,7 +97,13 @@ export const AuthProvider = ({ children }) => {
         return <div className="p-10 text-center">Cargando autenticación...</div>;
     }
   return (
-    <AuthContext.Provider value={{ user, loading, logout, redirectToCore }}>
+    <AuthContext.Provider value={{ 
+        user, 
+        loading, 
+        logout,       // <--- Exponemos logout
+        goToCampus,   // <--- Exponemos goToCampus
+        redirectToCore // (tu función interna de redirección forzada)
+    }}>
       {children}
     </AuthContext.Provider>
   );

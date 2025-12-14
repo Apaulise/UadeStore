@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, } from "react";
 import { Link, NavLink, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import logoUade from "../../assets/logouadeNegro.png";
 import { useCart } from "../../context/CartContext";
@@ -194,7 +194,7 @@ const Header = () => {
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => setIsOpen(false)} // Cerramos al hacer click
             >
-              🛍️ Mis Compras
+              Mis Compras
             </Link>
 
             {/* Opción 2: Ir al Campus (Acción externa) */}
@@ -205,7 +205,7 @@ const Header = () => {
               }}
               className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
             >
-              🏛️ Ir al Campus
+              Ir al Campus
             </button>
 
             <div className="my-1 border-t border-gray-100"></div>
@@ -218,7 +218,7 @@ const Header = () => {
               }}
               className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
             >
-              🚪 Cerrar Sesión
+              Cerrar Sesión
             </button>
           </div>
         )}

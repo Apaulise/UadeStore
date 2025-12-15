@@ -118,7 +118,7 @@ export const createNewPurchase = async (purchaseData) => {
     items: itemsForEvent,
     createdAt: compra?.created_at ?? new Date().toISOString(),
   };
-
+  console.log("🐰 [RABBIT DEBUG] Enviando evento purchase.created:", JSON.stringify(purchasePayload, null, 2));
   await publishPurchaseEvent('created', purchasePayload);
   await publishPurchaseEvent('completed', { ...purchasePayload, status: 'COMPLETED' });
 

@@ -115,7 +115,7 @@ export const createNewPurchase = async (purchaseData) => {
     id: compraId,
     userId: userId ?? compra?.usuario_id ?? null,
     total,
-    items: itemsToInsert,
+    items: itemsForEvent,
     createdAt: compra?.created_at ?? new Date().toISOString(),
   };
 

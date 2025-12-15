@@ -9,6 +9,7 @@ export const createNewPurchase = async (purchaseData) => {
      console.error("[OrderService] Error: userId inválido.", userId);
      throw new Error('El ID de usuario es inválido.');
   }
+  const itemsForEvent = [];
 
   // --- Insertar la Compra Principal ---
   const { data: compra, error: compraError } = await supabase
@@ -30,7 +31,7 @@ export const createNewPurchase = async (purchaseData) => {
   const itemsToInsert = items.map((item) => ({
     compra_id: compraId,
     stock_id: item.stockId,
-    cantidad: item.quantity,
+    cantidad: item.quantity,  
     subtotal: item.price * item.quantity,
   }));
 
@@ -49,7 +50,7 @@ export const createNewPurchase = async (purchaseData) => {
       // 1. Obtener el stock actual (Necesario para calcular el nuevo stock en JS)
       const { data: currentStockData, error: fetchError } = await supabase
         .from('Stock')
-        .select('id, articulo_id, color_id, talle, stock')
+        .select('id, articulo_id, color_id, talle, stock, Articulo ( Titulo )')
         .eq('id', item.stockId)
         .single();
 
@@ -58,6 +59,18 @@ export const createNewPurchase = async (purchaseData) => {
           `No se pudo obtener el stock actual para stockId ${item.stockId}. Details: ${fetchError?.message}`,
         );
       }
+
+      // ✨ Extraemos el título (usamos ?. por seguridad)
+      const articleTitle = currentStockData.Articulo?.Titulo || "Producto Desconocido";
+
+      // ✨ Guardamos el item enriquecido para el evento
+      itemsForEvent.push({
+          stockId: item.stockId,
+          quantity: item.quantity,
+          price: item.price,
+          title: articleTitle, 
+          subtotal: item.price * item.quantity
+      });
 
       const currentStockValue = currentStockData.stock;
       const purchasedQuantity = item.quantity;

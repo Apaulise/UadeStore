@@ -56,9 +56,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('authToken');
     sessionStorage.removeItem('lastOrder'); // Limpiamos órdenes pendientes por si acaso
     
-    // 3. Redirigimos al Login del Core
-    // No mandamos redirectUrl porque queremos que se quede en el login/logout
-    window.location.href = CORE_LOGIN_URL; 
+    // 3. Redirigimos al logout del Core
+    window.location.href = "https://core-frontend-2025-02.netlify.app/logout"; 
   };
 
   const redirectToCore = () => {

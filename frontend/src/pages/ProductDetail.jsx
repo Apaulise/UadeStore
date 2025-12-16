@@ -150,9 +150,14 @@ const ProductDetail = () => {
         const mapped = mapDetailProduct(data);
         setProduct(mapped);
 
+        const showSize = mapped.category === "NUESTROS BASICOS";
         const defaultVariant = mapped.variants.find((variant) => variant.available) ?? mapped.variants[0] ?? null;
+        const defaultSize = showSize
+          ? defaultVariant?.size ?? mapped.variants.find((v) => v.size !== null && v.size !== undefined)?.size ?? null
+          : null;
+
         setSelectedColor(defaultVariant?.colorId ?? null);
-        setSelectedSize(showSizeFeatures ? defaultVariant?.size ?? null : null);
+        setSelectedSize(defaultSize);
         setQuantity(1);
         setSelectedImage(0);
       } catch (err) {
@@ -407,9 +412,7 @@ const sizeOptions = useMemo(() => {
                       key={option.id ?? "default"}
                       type="button"
                       onClick={() => setSelectedColor(option.id ?? null)}
-                      className={`h-9 w-9 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue hover:shadow ${
-                        option.available ? "" : "cursor-not-allowed opacity-50"
-                      }`}
+                      className="h-9 w-9 rounded-full border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue hover:shadow"
                       style={{
                         backgroundColor: ensureHex(option.hex),
                         borderColor:
@@ -421,8 +424,7 @@ const sizeOptions = useMemo(() => {
                             ? "0 0 0 4px rgba(31,59,103,0.25)"
                             : undefined,
                       }}
-                      aria-label={`Seleccionar color ${option.label}`}
-                      disabled={!option.available} // Se deshabilita si no está disponible
+                      aria-label={`Seleccionar color ${option.label}${option.available ? "" : " (sin stock)"}`}
                     />
                   ))}
                   {/* --- FIN DE JSX DE COLOR CORREGIDO --- */}
@@ -431,7 +433,7 @@ const sizeOptions = useMemo(() => {
             )}
 
             {showSizeFeatures && sizeOptions.length > 0 && (
-              <div>
+              <div className="space-y-2">
                 <div className="flex items-center gap-4">
                   <p className="text-sm font-semibold text-brand-text">Talle:</p>
                   <button
@@ -448,13 +450,24 @@ const sizeOptions = useMemo(() => {
                       key={option.label}
                       type="button"
                       onClick={() => setSelectedSize(option.value)}
-                      className={`min-w-10 rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
+                      className={`relative min-w-10 overflow-hidden rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
                         (selectedSize ?? null) === (option.value ?? null)
                           ? "border-[#1F3B67] bg-white text-brand-text"
                           : "border-black/15 bg-white text-brand-text hover:border-[#1F3B67]"
-                      } ${option.available ? "" : "cursor-not-allowed opacity-50"}`}
+                      } ${option.available ? "" : "border-red-200 bg-gray-100 text-gray-500 opacity-100 cursor-not-allowed"}`}
+                      aria-label={option.available ? `Talle ${option.label}` : `Talle ${option.label} sin stock`}
                       disabled={!option.available}
                     >
+                      {!option.available && (
+                        <span
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0 opacity-70"
+                          style={{
+                            backgroundImage:
+                              "linear-gradient(135deg, transparent 45%, #ef4444 45%, #ef4444 55%, transparent 55%)",
+                          }}
+                        />
+                      )}
                       {option.label}
                     </button>
                   ))}
@@ -494,7 +507,7 @@ const sizeOptions = useMemo(() => {
               disabled={isAddDisabled}
               className={`w-full rounded-full border-2 py-3 text-lg font-semibold transition disabled:cursor-not-allowed ${
                 isAddDisabled
-                  ? "border-[#1F3B67] bg-[#1F3B67] text-white"
+                  ? "border-gray-300 bg-gray-200 text-gray-500"
                   : "border-[#1F3B67] bg-[#1F3B67] text-white hover:bg-transparent hover:text-[#1F3B67]"
               }`}
             >

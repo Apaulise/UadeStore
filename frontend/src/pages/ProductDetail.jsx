@@ -292,11 +292,17 @@ const sizeOptions = useMemo(() => {
   const availableUnits = selectedVariant?.availableUnits ?? 0;
   const isAddDisabled = !selectedVariant?.available || availableUnits === 0;
 
+  useEffect(() => {
+    if (availableUnits > 0 && quantity > availableUnits) {
+      setQuantity(availableUnits);
+    }
+  }, [availableUnits, quantity]);
+  
   const increaseQuantity = () => {
-    setQuantity((prev) => {
-      const max = availableUnits || prev + 1;
-      return Math.min(prev + 1, max);
-    });
+    // Solo aumenta si la cantidad actual es menor al stock disponible
+    if (quantity < availableUnits) {
+      setQuantity((prev) => prev + 1);
+    }
   };
 
   const decreaseQuantity = () => {
@@ -476,30 +482,42 @@ const sizeOptions = useMemo(() => {
             )}
 
             <div>
-              <p className="text-sm font-semibold text-brand-text">Cantidad:</p>
-              <div className="mt-3 flex items-center gap-4">
-                <div className="flex items-center rounded-full border border-black/10 bg-white">
-                  <button
-                    type="button"
-                    onClick={decreaseQuantity}
-                    className="h-10 w-10 rounded-full text-lg font-bold text-brand-text transition hover:bg-black/5"
-                  >
-                    -
-                  </button>
-                  <span className="w-12 text-center text-lg font-semibold">{quantity}</span>
-                  <button
-                    type="button"
-                    onClick={increaseQuantity}
-                    className="h-10 w-10 rounded-full text-lg font-bold text-brand-text transition hover:bg-black/5"
-                  >
-                    +
-                  </button>
-                </div>
-                <span className="text-sm text-brand-text/60">
-                  Disponible: {availableUnits} unidades
-                </span>
-              </div>
-            </div>
+  <p className="text-sm font-semibold text-brand-text">Cantidad:</p>
+  <div className="mt-3 flex items-center gap-4">
+    <div className="flex items-center rounded-full border border-black/10 bg-white">
+      
+      {/* Botón MENOS */}
+      <button
+        type="button"
+        onClick={decreaseQuantity}
+        disabled={quantity <= 1} // Deshabilitar si es 1
+        className="h-10 w-10 rounded-full text-lg font-bold text-brand-text transition hover:bg-black/5 disabled:opacity-30 disabled:hover:bg-transparent"
+      >
+        -
+      </button>
+
+      <span className="w-12 text-center text-lg font-semibold">{quantity}</span>
+
+      {/* Botón MAS (Modificado) */}
+      <button
+        type="button"
+        onClick={increaseQuantity}
+        disabled={quantity >= availableUnits} // ✨ Se deshabilita si llegamos al tope
+        className="h-10 w-10 rounded-full text-lg font-bold text-brand-text transition hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+      >
+        +
+      </button>
+
+    </div>
+    
+    {/* Texto de disponibilidad */}
+    <span className={`text-sm ${quantity >= availableUnits ? 'text-red-500 font-medium' : 'text-brand-text/60'}`}>
+      {quantity >= availableUnits && availableUnits > 0
+        ? "¡Stock máximo alcanzado!" 
+        : `Disponible: ${availableUnits} unidades`}
+    </span>
+  </div>
+</div>
 
             <button
               type="button"

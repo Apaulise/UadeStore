@@ -204,7 +204,7 @@ export const WalletAPI = {
       to: "SYSTEM",         // ⚠️ REGLA DE NEGOCIO: Para compras, va a SYSTEM
       currency: currency,   // Ej: "ARG" o "USD"
       amount: Number(amount),
-      type: "payment",      // Tipo de movimiento
+      type: "COMPRA",      // Tipo de movimiento
       description: description // Ej: "Compra orden #123"
     };
 

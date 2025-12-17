@@ -1,5 +1,5 @@
 //(ejecutalo con SSMS o sqlcmd):
-IF DB_ID('CampusStore') IS NULL
+/*IF DB_ID('CampusStore') IS NULL
   CREATE DATABASE CampusStore;
 GO
 USE CampusStore;
@@ -54,3 +54,4 @@ VALUES
 (1, 'Remera UADE', 'Remera algodón', 9999.00, 30, 'https://picsum.photos/seed/remera/400/300'),
 (2, 'Cuaderno UADE', 'Tapa dura', 4999.00, 50, 'https://picsum.photos/seed/cuaderno/400/300'),
 (3, 'Mochila UADE', 'Edición Campus', 25999.00, 10, 'https://picsum.photos/seed/mochila/400/300');
+*/
